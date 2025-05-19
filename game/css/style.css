@@ -1,0 +1,196 @@
+/* Reset CSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #222;
+    font-family: Arial, sans-serif;
+}
+
+.game-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#gameCanvas {
+    background-color: #000;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    /* Maintain the 240:320 aspect ratio */
+    aspect-ratio: 240 / 320;
+}
+
+/* Media queries for different device orientations */
+@media (orientation: portrait) {
+    #gameCanvas {
+        width: 100%;
+        height: auto;
+    }
+}
+
+@media (orientation: landscape) {
+    #gameCanvas {
+        height: 100%;
+        width: auto;
+    }
+}
+
+/* Prevent touch callouts and selections */
+body {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    touch-action: none;
+}
+
+/* Dimension theme styles */
+.dimension-normal {
+    --bg-color: #000000;
+    --ball-color: #FFFFFF;
+    --paddle-color: #0095DD;
+    --text-color: #FFFFFF;
+}
+
+.dimension-reverse {
+    --bg-color: #001133;
+    --ball-color: #FFCC00;
+    --paddle-color: #FF4081;
+    --text-color: #FFCC00;
+}
+
+.dimension-time {
+    --bg-color: #220033;
+    --ball-color: #00FFFF;
+    --paddle-color: #FFCC00;
+    --text-color: #00FFFF;
+}
+
+/* Dimension transition animation */
+@keyframes dimensionShift {
+    0% {
+        filter: blur(0);
+        opacity: 1;
+    }
+    50% {
+        filter: blur(10px);
+        opacity: 0.7;
+    }
+    100% {
+        filter: blur(0);
+        opacity: 1;
+    }
+}
+
+.dimension-shifting {
+    animation: dimensionShift 0.5s ease-in-out;
+}
+
+/* Brick styles */
+.brick {
+    position: absolute;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.dimension-brick {
+    box-shadow: 0 0 8px #FF00FF;
+    animation: pulsate 1.5s infinite alternate;
+}
+
+@keyframes pulsate {
+    0% {
+        box-shadow: 0 0 5px #FF00FF;
+    }
+    100% {
+        box-shadow: 0 0 15px #FF00FF, 0 0 20px #FF00FF;
+    }
+}
+
+/* Particle effects */
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* Power-up effects */
+.power-up {
+    position: absolute;
+    border-radius: 50%;
+    animation: powerUpFloat 3s infinite ease-in-out;
+}
+
+@keyframes powerUpFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Game state overlays */
+.game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 10;
+}
+
+.game-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.game-text {
+    font-size: 16px;
+    margin: 5px 0;
+}
+
+/* Dimension indicators */
+.dimension-indicator {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: white;
+    text-align: center;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Time dimension slow-motion effect */
+.time-dimension {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Reverse dimension visual cues */
+.reverse-dimension {
+    transform: scaleY(-1);
+}

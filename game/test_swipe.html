@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Swipe Controls Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+        
+        #test-area {
+            width: 240px;
+            height: 320px;
+            background-color: #000;
+            position: relative;
+            touch-action: none;
+        }
+        
+        #paddle {
+            width: 60px;
+            height: 10px;
+            background-color: #0095DD;
+            position: absolute;
+            bottom: 20px;
+            left: 90px; /* Centered initially */
+        }
+        
+        #info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            width: 240px;
+            text-align: center;
+        }
+        
+        #direction {
+            font-weight: bold;
+            color: #0095DD;
+        }
+    </style>
+</head>
+<body>
+    <h1>Swipe Controls Test</h1>
+    <div id="test-area">
+        <div id="paddle"></div>
+    </div>
+    <div id="info">
+        <p>Swipe direction: <span id="direction">None</span></p>
+        <p>Swipe velocity: <span id="velocity">0</span></p>
+    </div>
+
+    <script>
+        // Elements
+        const testArea = document.getElementById('test-area');
+        const paddle = document.getElementById('paddle');
+        const directionDisplay = document.getElementById('direction');
+        const velocityDisplay = document.getElementById('velocity');
+        
+        // Control state
+        const controls = {
+            touchStartX: null,
+            touchStartY: null,
+            touchStartTime: null,
+            lastSwipeDirection: null,
+            swipeVelocity: 0
+        };
+        
+        // Swipe configuration
+        const swipeConfig = {
+            minDistance: 20,      // Minimum distance to consider as a swipe (pixels)
+            maxTime: 300,         // Maximum time for a swipe (milliseconds)
+            velocityFactor: 0.5,  // Factor to convert swipe velocity to paddle movement
+            paddleBaseSpeed: 240  // Base paddle speed (pixels per second)
+        };
+        
+        // Game area dimensions
+        const gameWidth = 240;
+        
+        // Touch event handlers
+        testArea.addEventListener('touchstart', handleTouchStart, false);
+        testArea.addEventListener('touchmove', handleTouchMove, false);
+        testArea.addEventListener('touchend', handleTouchEnd, false);
+        
+        function handleTouchStart(e) {
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            const rect = testArea.getBoundingClientRect();
+            
+            // Store the initial touch position and time
+            controls.touchStartX = touch.clientX - rect.left;
+            controls.touchStartY = touch.clientY - rect.top;
+            controls.touchStartTime = Date.now();
+        }
+        
+        function handleTouchMove(e) {
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            const rect = testArea.getBoundingClientRect();
+            
+            const touchX = touch.clientX - rect.left;
+            const touchY = touch.clientY - rect.top;
+            
+            // Calculate swipe direction in real-time
+            const deltaX = touchX - controls.touchStartX;
+            const deltaY = touchY - controls.touchStartY;
+            
+            // Only update if we've moved enough to consider it a swipe
+            if (Math.abs(deltaX) > swipeConfig.minDistance || Math.abs(deltaY) > swipeConfig.minDistance) {
+                // Determine swipe direction based on angle
+                const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+                
+                let direction;
+                if (angle > -45 && angle <= 45) {
+                    direction = 'right';
+                } else if (angle > 45 && angle <= 135) {
+                    direction = 'down';
+                } else if ((angle > 135 && angle <= 180) || (angle >= -180 && angle <= -135)) {
+                    direction = 'left';
+                } else if (angle > -135 && angle <= -45) {
+                    direction = 'up';
+                }
+                
+                // Map swipe direction to paddle movement
+                if (direction === 'left' || direction === 'down') {
+                    controls.lastSwipeDirection = 'left';
+                    // Calculate swipe velocity
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    const time = Date.now() - controls.touchStartTime;
+                    controls.swipeVelocity = distance / time;
+                    
+                    // Move paddle left
+                    let newX = parseInt(paddle.style.left || '90') - 5;
+                    if (newX < 0) newX = 0;
+                    paddle.style.left = newX + 'px';
+                } else if (direction === 'right' || direction === 'up') {
+                    controls.lastSwipeDirection = 'right';
+                    // Calculate swipe velocity
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    const time = Date.now() - controls.touchStartTime;
+                    controls.swipeVelocity = distance / time;
+                    
+                    // Move paddle right
+                    let newX = parseInt(paddle.style.left || '90') + 5;
+                    if (newX > gameWidth - 60) newX = gameWidth - 60;
+                    paddle.style.left = newX + 'px';
+                }
+                
+                // Update display
+                directionDisplay.textContent = direction;
+                velocityDisplay.textContent = controls.swipeVelocity.toFixed(2);
+            }
+        }
+        
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            
+            // Calculate final swipe if needed
+            if (controls.touchStartTime) {
+                const deltaTime = Date.now() - controls.touchStartTime;
+                
+                // Only process as a swipe if it was quick enough
+                if (deltaTime < swipeConfig.maxTime) {
+                    // The swipe direction was already determined in touchMove
+                }
+            }
+            
+            // Reset touch state after a short delay
+            setTimeout(() => {
+                controls.lastSwipeDirection = null;
+                controls.swipeVelocity = 0;
+                directionDisplay.textContent = 'None';
+                velocityDisplay.textContent = '0';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

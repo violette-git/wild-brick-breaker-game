@@ -1,0 +1,126 @@
+# Brick Breaker Game Sound Events
+
+This document lists all game events that require sound effects, categorized by type.
+
+## Hits
+1. Ball hits paddle
+   - Description: When the ball bounces off the player's paddle
+   - Sound type: Soft bounce/ping sound
+   - Variations needed: Normal, Reverse dimension, Time dimension
+
+2. Ball hits wall
+   - Description: When the ball bounces off the side or top walls
+   - Sound type: Hard bounce/ping sound
+   - Variations needed: None
+
+## Breaks
+1. Normal brick break
+   - Description: When a regular brick is destroyed
+   - Sound type: Breaking/shattering sound
+   - Variations needed: Different pitches based on brick color
+
+2. Dimension brick break
+   - Description: When a dimension shift brick is destroyed
+   - Sound type: Magical/ethereal breaking sound
+   - Variations needed: None
+
+## Dimension Shifts
+1. Dimension shift initiation
+   - Description: When a dimension shift begins (immediately after hitting a dimension brick)
+   - Sound type: Rising whoosh/portal opening sound
+   - Variations needed: None
+
+2. Shift to Normal dimension
+   - Description: When the game shifts to the Normal dimension
+   - Sound type: Neutral tone, balanced sound
+   - Variations needed: None
+
+3. Shift to Reverse dimension
+   - Description: When the game shifts to the Reverse dimension
+   - Sound type: Reversed/flipped sound effect, gravity shifting sound
+   - Variations needed: None
+
+4. Shift to Time dimension
+   - Description: When the game shifts to the Time dimension
+   - Sound type: Time-warping sound, clock ticking slowing down
+   - Variations needed: None
+
+5. Dimension shift completion
+   - Description: When the dimension shift animation completes
+   - Sound type: Settling/stabilizing sound
+   - Variations needed: Different for each dimension
+
+## Powerups
+1. Powerup appearance
+   - Description: When a powerup appears from a broken brick
+   - Sound type: Magical chime/sparkle sound
+   - Variations needed: None
+
+2. Powerup collection
+   - Description: When the player's paddle collects a powerup
+   - Sound type: Positive collection sound
+   - Variations needed: Different for each powerup type
+
+## Game State Changes
+1. Game start
+   - Description: When the player starts a new game
+   - Sound type: Upbeat game start fanfare
+   - Variations needed: None
+
+2. Level complete
+   - Description: When the player clears all bricks in a level
+   - Sound type: Victory fanfare
+   - Variations needed: None
+
+3. Game over
+   - Description: When the player loses their last life
+   - Sound type: Sad game over sound
+   - Variations needed: None
+
+4. Life lost
+   - Description: When the player loses a life
+   - Sound type: Negative failure sound
+   - Variations needed: None
+
+## Dimension-Specific Ambient Sounds
+1. Normal dimension
+   - Description: Background ambient sound for the normal dimension
+   - Sound type: Neutral game music/ambient sound
+   - Variations needed: None
+
+2. Reverse dimension
+   - Description: Background ambient sound for the reverse dimension
+   - Sound type: Reversed/upside-down feeling ambient sound
+   - Variations needed: None
+
+3. Time dimension
+   - Description: Background ambient sound for the time dimension
+   - Sound type: Slow, time-warped ambient sound with clock elements
+   - Variations needed: None
+
+## UI Sounds
+1. Menu navigation
+   - Description: When navigating menu options
+   - Sound type: UI click/selection sound
+   - Variations needed: None
+
+2. Button press
+   - Description: When pressing a button in menus
+   - Sound type: UI confirmation sound
+   - Variations needed: None
+
+## Special Events
+1. Ball speed increase
+   - Description: When the ball speed increases (e.g., after hitting multiple bricks)
+   - Sound type: Accelerating whoosh sound
+   - Variations needed: None
+
+2. Combo hits
+   - Description: When breaking multiple bricks in quick succession
+   - Sound type: Escalating pitch/intensity for each brick in combo
+   - Variations needed: None
+
+3. Near miss
+   - Description: When the ball narrowly misses the paddle
+   - Sound type: Tense "close call" sound
+   - Variations needed: None

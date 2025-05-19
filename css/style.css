@@ -1,0 +1,159 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none; /* Prevent text selection */
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    touch-action: none; /* Prevent default touch actions like scrolling */
+    overflow: hidden;
+}
+
+#gameCanvas {
+    background-color: #000;
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    touch-action: none; /* Prevent default touch actions on canvas */
+}
+
+/* Maintain aspect ratio */
+@media (min-aspect-ratio: 240/320) {
+    #gameCanvas {
+        height: 100%;
+        width: auto;
+    }
+}
+
+@media (max-aspect-ratio: 240/320) {
+    #gameCanvas {
+        width: 100%;
+        height: auto;
+    }
+}
+
+/* Dimension-specific background effects for the container */
+.dimension-normal #game-container {
+    background: radial-gradient(circle, #333 0%, #111 100%);
+}
+
+.dimension-reverseGravity #game-container {
+    background: radial-gradient(circle, #440044 0%, #220022 100%);
+    animation: pulse-bg 3s infinite alternate;
+}
+
+.dimension-timeWarp #game-container {
+    background: radial-gradient(circle, #004455 0%, #002233 100%);
+    animation: ripple-bg 8s infinite linear;
+}
+
+/* Dimension transition effects */
+.dimension-transition #game-container {
+    animation: flash 0.5s;
+}
+
+/* Dimension-specific animations */
+@keyframes pulse-bg {
+    0% {
+        background: radial-gradient(circle, #440044 0%, #220022 100%);
+    }
+    100% {
+        background: radial-gradient(circle, #550055 0%, #330033 100%);
+    }
+}
+
+@keyframes ripple-bg {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 100%;
+    }
+}
+
+@keyframes flash {
+    0% {
+        filter: brightness(1);
+    }
+    50% {
+        filter: brightness(2);
+    }
+    100% {
+        filter: brightness(1);
+    }
+}
+
+/* Canvas border effects for different dimensions */
+.dimension-normal #gameCanvas {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.dimension-reverseGravity #gameCanvas {
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+    animation: glow-purple 2s infinite alternate;
+}
+
+.dimension-timeWarp #gameCanvas {
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    animation: glow-cyan 4s infinite alternate;
+}
+
+@keyframes glow-purple {
+    0% {
+        box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(255, 0, 255, 0.7);
+    }
+}
+
+@keyframes glow-cyan {
+    0% {
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
+    }
+}
+
+/* Dimension transition animation */
+.dimension-shift-animation {
+    animation: dimension-shift 0.5s;
+}
+
+@keyframes dimension-shift {
+    0% {
+        transform: scale(1);
+        filter: blur(0);
+    }
+    50% {
+        transform: scale(1.05);
+        filter: blur(5px);
+    }
+    100% {
+        transform: scale(1);
+        filter: blur(0);
+    }
+}

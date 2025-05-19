@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Dimensional Brick Breaker</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dimension-normal">
+    <div id="game-container">
+        <canvas id="gameCanvas" width="240" height="320"></canvas>
+    </div>
+    
+    <script>
+        // Helper function to update body class based on current dimension
+        function updateDimensionClass(dimension) {
+            document.body.className = '';
+            document.body.classList.add('dimension-' + dimension);
+            
+            // Add transition animation class
+            document.body.classList.add('dimension-shift-animation');
+            
+            // Remove animation class after it completes
+            setTimeout(() => {
+                document.body.classList.remove('dimension-shift-animation');
+            }, 500);
+        }
+        
+        // Listen for dimension change events
+        document.addEventListener('dimensionChange', function(e) {
+            updateDimensionClass(e.detail.dimension);
+        });
+    </script>
+    
+    <script src="js/effects.js"></script>
+    <script src="js/controls.js"></script>
+    <script src="js/game.js"></script>
+    
+    <script>
+        // Add event listener to update dimension class when game loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create a custom event dispatcher for dimension changes
+            window.dispatchDimensionChangeEvent = function(dimension) {
+                const event = new CustomEvent('dimensionChange', {
+                    detail: { dimension: dimension }
+                });
+                document.dispatchEvent(event);
+            };
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Touch Controls Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+            touch-action: none;
+        }
+        
+        .game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        #gameCanvas {
+            background-color: #000;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            aspect-ratio: 240 / 320;
+            border: 1px solid #444;
+        }
+        
+        #debugInfo {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 80%;
+            z-index: 100;
+        }
+        
+        .instructions {
+            color: white;
+            margin-top: 20px;
+            text-align: center;
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="240" height="320"></canvas>
+        <div class="instructions">
+            <h3>Touch Controls Test</h3>
+            <p>Swipe left/down to move paddle left</p>
+            <p>Swipe right/up to move paddle right</p>
+            <p>Tap to start/pause</p>
+        </div>
+        <div id="debugInfo">Touch events will be shown here</div>
+    </div>
+    
+    <script>
+        // Simple test environment for touch controls
+        (function() {
+            // Canvas setup
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const debugInfo = document.getElementById('debugInfo');
+            
+            // Game dimensions
+            const GAME_WIDTH = 240;
+            const GAME_HEIGHT = 320;
+            
+            // Paddle object for testing
+            const paddle = {
+                width: 60,
+                height: 10,
+                x: (GAME_WIDTH - 60) / 2,
+                y: GAME_HEIGHT - 20,
+                dx: 5,
+                isMovingLeft: false,
+                isMovingRight: false,
+                swipeVelocity: 0,
+                maxSpeed: 10,
+                
+                draw: function() {
+                    ctx.beginPath();
+                    ctx.rect(this.x, this.y, this.width, this.height);
+                    ctx.fillStyle = '#0095DD';
+                    ctx.fill();
+                    ctx.closePath();
+                },
+                
+                update: function() {
+                    // Calculate paddle speed based on control state and swipe velocity
+                    let moveSpeed = this.dx;
+                    
+                    // If we have swipe velocity, use it to adjust paddle speed
+                    if (this.swipeVelocity > 0) {
+                        moveSpeed = Math.min(this.maxSpeed, this.swipeVelocity);
+                    }
+                    
+                    // Move paddle based on control states
+                    if (this.isMovingLeft) {
+                        this.x = Math.max(0, this.x - moveSpeed);
+                    }
+                    if (this.isMovingRight) {
+                        this.x = Math.min(GAME_WIDTH - this.width, this.x + moveSpeed);
+                    }
+                    
+                    // Gradually reduce swipe velocity over time
+                    if (this.swipeVelocity > 0) {
+                        this.swipeVelocity *= 0.95; // Decay factor
+                        if (this.swipeVelocity < 0.5) {
+                            this.swipeVelocity = 0;
+                        }
+                    }
+                }
+            };
+            
+            // Control state
+            const controlState = {
+                leftPressed: false,
+                rightPressed: false,
+                touchSensitivity: 1.0
+            };
+            
+            // Touch control variables
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+            let touchStartTime = 0;
+            let isTouching = false;
+            let lastSwipeVelocity = 0;
+            let swipeDirection = null;
+            let touchLog = [];
+            
+            // Initialize touch controls
+            function initTouchControls() {
+                // Touch start event
+                canvas.addEventListener('touchstart', function(e) {
+                    e.preventDefault(); // Prevent default touch behavior
+                    
+                    isTouching = true;
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    touchEndX = touchStartX;
+                    touchEndY = touchStartY;
+                    touchStartTime = Date.now();
+                    
+                    // Reset swipe velocity and direction
+                    lastSwipeVelocity = 0;
+                    swipeDirection = null;
+                    
+                    // Reset paddle movement
+                    controlState.leftPressed = false;
+                    controlState.rightPressed = false;
+                    
+                    // Log touch start
+                    logTouch('touchstart', touchStartX, touchStartY);
+                    updatePaddleMovement();
+                });
+                
+                // Touch move event
+                canvas.addEventListener('touchmove', function(e) {
+                    e.preventDefault(); // Prevent default touch behavior
+                    
+                    if (isTouching) {
+                        touchEndX = e.touches[0].clientX;
+                        touchEndY = e.touches[0].clientY;
+                        
+                        // Calculate swipe direction and distance
+                        const deltaX = touchEndX - touchStartX;
+                        const deltaY = touchEndY - touchStartY;
+                        
+                        // Calculate time elapsed since touch start
+                        const touchTime = Date.now() - touchStartTime;
+                        
+                        // Calculate velocity (pixels per millisecond)
+                        const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / touchTime;
+                        
+                        // Scale velocity by sensitivity
+                        lastSwipeVelocity = velocity * controlState.touchSensitivity * 50;
+                        
+                        // Determine primary swipe direction
+                        if (Math.abs(deltaX) > Math.abs(deltaY) * 0.5) {
+                            if (deltaX < 0) {
+                                // Left swipe
+                                swipeDirection = 'left';
+                                controlState.leftPressed = true;
+                                controlState.rightPressed = false;
+                            } else {
+                                // Right swipe
+                                swipeDirection = 'right';
+                                controlState.leftPressed = false;
+                                controlState.rightPressed = true;
+                            }
+                        } else if (Math.abs(deltaY) > Math.abs(deltaX) * 2) {
+                            // Vertical swipe with minimal horizontal component
+                            if (deltaY < 0) {
+                                // Up swipe - map to right
+                                swipeDirection = 'up';
+                                controlState.leftPressed = false;
+                                controlState.rightPressed = true;
+                            } else {
+                                // Down swipe - map to left
+                                swipeDirection = 'down';
+                                controlState.leftPressed = true;
+                                controlState.rightPressed = false;
+                            }
+                        }
+                        
+                        // Log touch move
+                        logTouch('touchmove', touchEndX, touchEndY, deltaX, deltaY, velocity, swipeDirection);
+                        updatePaddleMovement();
+                    }
+                });
+                
+                // Touch end event
+                canvas.addEventListener('touchend', function(e) {
+                    e.preventDefault(); // Prevent default touch behavior
+                    
+                    if (isTouching) {
+                        isTouching = false;
+                        
+                        // Calculate final swipe metrics
+                        const deltaX = touchEndX - touchStartX;
+                        const deltaY = touchEndY - touchStartY;
+                        const touchTime = Date.now() - touchStartTime;
+                        
+                        // Only process as a swipe if it's a deliberate motion
+                        if (touchTime > 50 && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
+                            // Calculate final velocity
+                            const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / touchTime;
+                            lastSwipeVelocity = velocity * controlState.touchSensitivity * 50;
+                            
+                            // Apply momentum based on swipe velocity
+                            if (swipeDirection === 'left' || swipeDirection === 'down') {
+                                controlState.leftPressed = true;
+                                controlState.rightPressed = false;
+                            } else if (swipeDirection === 'right' || swipeDirection === 'up') {
+                                controlState.leftPressed = false;
+                                controlState.rightPressed = true;
+                            }
+                            
+                            // Schedule momentum decay
+                            setTimeout(function() {
+                                // Reset control state after momentum effect
+                                controlState.leftPressed = false;
+                                controlState.rightPressed = false;
+                                lastSwipeVelocity = 0;
+                                updatePaddleMovement();
+                            }, 300); // Momentum lasts for 300ms
+                        } else {
+                            // Handle as a tap - reset movement immediately
+                            controlState.leftPressed = false;
+                            controlState.rightPressed = false;
+                            lastSwipeVelocity = 0;
+                            
+                            // If it's a tap, log it
+                            if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10 && touchTime < 200) {
+                                logTouch('tap', touchEndX, touchEndY);
+                            }
+                        }
+                        
+                        // Log touch end
+                        logTouch('touchend', touchEndX, touchEndY, deltaX, deltaY, lastSwipeVelocity, swipeDirection);
+                        updatePaddleMovement();
+                    }
+                });
+                
+                // Touch cancel event
+                canvas.addEventListener('touchcancel', function(e) {
+                    e.preventDefault();
+                    isTouching = false;
+                    controlState.leftPressed = false;
+                    controlState.rightPressed = false;
+                    lastSwipeVelocity = 0;
+                    logTouch('touchcancel');
+                    updatePaddleMovement();
+                });
+            }
+            
+            // Update paddle movement based on control state
+            function updatePaddleMovement() {
+                paddle.isMovingLeft = controlState.leftPressed;
+                paddle.isMovingRight = controlState.rightPressed;
+                paddle.swipeVelocity = lastSwipeVelocity;
+            }
+            
+            // Log touch events for debugging
+            function logTouch(eventType, x, y, deltaX, deltaY, velocity, direction) {
+                let logEntry = `${eventType}`;
+                
+                if (x !== undefined && y !== undefined) {
+                    logEntry += ` at (${Math.round(x)}, ${Math.round(y)})`;
+                }
+                
+                if (deltaX !== undefined && deltaY !== undefined) {
+                    logEntry += ` delta: (${Math.round(deltaX)}, ${Math.round(deltaY)})`;
+                }
+                
+                if (velocity !== undefined) {
+                    logEntry += ` velocity: ${velocity.toFixed(2)}`;
+                }
+                
+                if (direction) {
+                    logEntry += ` direction: ${direction}`;
+                }
+                
+                touchLog.unshift(logEntry);
+                if (touchLog.length > 5) {
+                    touchLog.pop();
+                }
+                
+                updateDebugInfo();
+            }
+            
+            // Update debug information display
+            function updateDebugInfo() {
+                let debugText = 'Touch Events:\n';
+                touchLog.forEach(entry => {
+                    debugText += entry + '\n';
+                });
+                
+                debugText += '\nPaddle State:\n';
+                debugText += `Position: ${Math.round(paddle.x)}\n`;
+                debugText += `Left: ${paddle.isMovingLeft}, Right: ${paddle.isMovingRight}\n`;
+                debugText += `Velocity: ${paddle.swipeVelocity.toFixed(2)}`;
+                
+                debugInfo.innerText = debugText;
+            }
+            
+            // Game loop
+            function gameLoop() {
+                // Clear the canvas
+                ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+                
+                // Draw background
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+                
+                // Update and draw paddle
+                paddle.update();
+                paddle.draw();
+                
+                // Draw touch indicator if touching
+                if (isTouching) {
+                    ctx.beginPath();
+                    ctx.arc(touchEndX * (GAME_WIDTH / canvas.clientWidth), 
+                            touchEndY * (GAME_HEIGHT / canvas.clientHeight), 
+                            10, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.fill();
+                    ctx.closePath();
+                }
+                
+                // Draw swipe direction indicator
+                if (swipeDirection) {
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = '#FFF';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`Swipe: ${swipeDirection}`, GAME_WIDTH / 2, 30);
+                }
+                
+                // Continue the game loop
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Initialize
+            function init() {
+                initTouchControls();
+                gameLoop();
+            }
+            
+            // Start when the page is loaded
+            window.addEventListener('load', init);
+        })();
+    </script>
+</body>
+</html>

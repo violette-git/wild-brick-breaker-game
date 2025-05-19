@@ -1,0 +1,40 @@
+{
+  "hits": [
+    {
+      "file": "paddle_hit.mp3",
+      "description": "Ball hitting paddle sound"
+    },
+    {
+      "file": "wall_hit.mp3",
+      "description": "Ball hitting wall sound"
+    }
+  ],
+  "breaks": [
+    {
+      "file": "brick_break.mp3",
+      "description": "Normal brick breaking sound"
+    },
+    {
+      "file": "special_brick_break.mp3",
+      "description": "Special brick breaking sound"
+    }
+  ],
+  "powerups": [
+    {
+      "file": "dimension_shift.mp3",
+      "description": "Dimension shift sound"
+    },
+    {
+      "file": "level_complete.mp3",
+      "description": "Level complete sound"
+    },
+    {
+      "file": "game_over.mp3",
+      "description": "Game over sound"
+    },
+    {
+      "file": "game_start.mp3",
+      "description": "Game start sound"
+    }
+  ]
+}
