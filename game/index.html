@@ -3,317 +3,421 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Brick Breaker Mobile</title>
+    <title>Brick Breaker Deluxe</title>
     <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #333; overflow: hidden; }
-        .game-container { width: 100%; max-width: 480px; /* Max width for larger screens */ aspect-ratio: 240 / 320; display: flex; justify-content: center; align-items: center; }
-        canvas { border: 1px solid #666; background-color: #000; display: block; touch-action: none; /* Prevents scrolling on canvas touch */ }
+        /* Reset CSS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Important to prevent scrollbars due to canvas scaling */
+            background-color: #222;
+            font-family: Arial, sans-serif;
+            display: flex; /* For centering game container */
+            justify-content: center;
+            align-items: center;
+            /* Prevent touch callouts and selections */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: none; /* Global prevention of scrolling on touch */
+        }
+
+        .game-container {
+            /* width: 100%; Removed to let aspect-ratio control width based on height */
+            /* height: 100%; Removed to let aspect-ratio control height based on width */
+            max-width: 100vw;  /* Ensure it doesn't overflow viewport width */
+            max-height: 100vh; /* Ensure it doesn't overflow viewport height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Maintain the 240:320 aspect ratio for the container of the canvas */
+            aspect-ratio: 240 / 320; 
+        }
+
+        #gameCanvas {
+            background-color: #000; /* Default, will be overridden by JS */
+            display: block; /* Removes extra space below canvas */
+            width: 100%;   /* Canvas fills its aspect-ratio controlled container */
+            height: 100%;  /* Canvas fills its aspect-ratio controlled container */
+            object-fit: contain; /* Should not be needed if container handles aspect ratio */
+        }
+        
+        /* Overlay for enabling sound */
+        #soundEnableOverlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 100;
+            cursor: pointer;
+        }
+        #soundEnableOverlay h2 { font-size: 24px; margin-bottom: 20px; }
+        #soundEnableOverlay p { font-size: 16px; }
+
     </style>
 </head>
 <body>
+    <div id="soundEnableOverlay">
+        <h2>Brick Breaker Deluxe</h2>
+        <p>Click or Tap to Enable Sounds and Start</p>
+    </div>
     <div class="game-container">
         <canvas id="gameCanvas"></canvas>
     </div>
 
 <script>
+// Game Effects Module (Integrated from previous effects.js)
 (function() {
-    // Canvas setup
+    const effectSettings = {
+        transitionDuration: 600, // ms, increased for more noticeable effect
+        particleCount: 30, // Increased for more visual flair
+        maxParticleSize: 5
+    };
+    
+    const dimensionThemes = { // Ensure keys are lowercase for consistency
+        normal: {
+            background: '#00001a', ballColor: '#FFFFFF', paddleColor: '#0095DD', textColor: '#FFFFFF',
+            particleColors: ['#FFFFFF', '#0095DD', '#7FDBFF']
+        },
+        ceiling: { // Theme for CEILING_PADDLE
+            background: '#1a001a', ballColor: '#FFCC00', paddleColor: '#FF4081', textColor: '#FFCC00',
+            particleColors: ['#FFCC00', '#FF4081', '#FF851B']
+        },
+        time: { // A theme for a potential TIME dimension
+            background: '#001a00', ballColor: '#00FFFF', paddleColor: '#39FF14', textColor: '#00FFFF',
+            particleColors: ['#00FFFF', '#39FF14', '#FFFF00']
+        }
+    };
+    
+    let activeAnimations = []; // Stores functions that draw an animation frame
+
+    function createDimensionShiftEffect(canvas, ctx, fromDimensionKey, toDimensionKey) {
+        const width = canvas.width;
+        const height = canvas.height;
+        const snapshot = ctx.getImageData(0, 0, width, height);
+        const startTime = Date.now();
+        const fromTheme = dimensionThemes[fromDimensionKey] || dimensionThemes.normal;
+        const toTheme = dimensionThemes[toDimensionKey] || dimensionThemes.normal;
+
+        let effectParticles = [];
+        for (let i = 0; i < effectSettings.particleCount * 2; i++) { // More particles for shift
+            effectParticles.push({
+                x: Math.random() * width, y: Math.random() * height,
+                size: 1 + Math.random() * effectSettings.maxParticleSize,
+                speedX: (Math.random() - 0.5) * 5, speedY: (Math.random() - 0.5) * 5,
+                color: toTheme.particleColors[Math.floor(Math.random() * toTheme.particleColors.length)],
+                life: 1.0
+            });
+        }
+
+        return function animateTransition() {
+            const elapsed = Date.now() - startTime;
+            let progress = Math.min(1, elapsed / effectSettings.transitionDuration);
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw fading old background
+            ctx.globalAlpha = 1 - progress;
+            ctx.fillStyle = fromTheme.background;
+            ctx.fillRect(0, 0, width, height);
+            ctx.putImageData(snapshot, 0, 0); // Fading snapshot of old scene
+            
+            // Draw emerging new background
+            ctx.globalAlpha = progress;
+            ctx.fillStyle = toTheme.background;
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.globalAlpha = 1;
+
+            // Draw transition particles
+            effectParticles.forEach(p => {
+                p.x += p.speedX * progress;
+                p.y += p.speedY * progress;
+                p.life -= 0.01; // Fade out slowly
+                if (p.life > 0) {
+                    ctx.globalAlpha = p.life * progress; // Fade in with progress
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            ctx.globalAlpha = 1;
+            
+            if (progress >= 1) {
+                effectParticles = []; // Clear particles for this effect
+                return true; // Animation complete
+            }
+            return false; // Continue animation
+        };
+    }
+    
+    function createBrickBreakEffect(ctx, brick) {
+        const particleCount = 15;
+        const effectParticles = [];
+        const theme = dimensionThemes[game.currentDimension.toLowerCase()] || dimensionThemes.normal;
+
+
+        for (let i = 0; i < particleCount; i++) {
+            effectParticles.push({
+                x: brick.x + brick.width / 2, y: brick.y + brick.height / 2,
+                size: 1 + Math.random() * 3,
+                speedX: (Math.random() - 0.5) * 5, speedY: (Math.random() - 0.5) * 5,
+                color: brick.isDimensionBrick ? theme.particleColors[2] : brick.color, // Use a theme color for special bricks
+                life: 1.0 // Normalized life (0-1)
+            });
+        }
+        
+        return function animateBrickBreak() {
+            let isActive = false;
+            effectParticles.forEach(p => {
+                if (p.life > 0) {
+                    isActive = true;
+                    p.x += p.speedX; p.y += p.speedY;
+                    p.speedY += 0.1; // Gravity
+                    p.life -= 0.03; // Fade rate
+                    
+                    ctx.globalAlpha = Math.max(0, p.life);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+                }
+            });
+            ctx.globalAlpha = 1;
+            return !isActive; 
+        };
+    }
+
+    function addAnimation(animationFunc) { activeAnimations.push(animationFunc); }
+    
+    function updateAnimations(ctx) { // Renamed for clarity, this function DRAWS the animations
+        activeAnimations = activeAnimations.filter(anim => !anim()); // Call anim, if it returns true, it's done
+    }
+
+    function applyDimensionTheme(dimensionKey, gameObj, ballObj, paddleObj, gameColors) {
+        const theme = dimensionThemes[dimensionKey.toLowerCase()] || dimensionThemes.normal;
+        gameColors.BACKGROUND_NORMAL = theme.background; // Or specific if different variants needed
+        gameColors.BACKGROUND_CEILING = theme.background; // For now, map to same
+        gameColors.BALL = theme.ballColor;
+        gameColors.PADDLE = theme.paddleColor;
+        gameColors.TEXT = theme.textColor;
+        
+        ballObj.color = theme.ballColor;
+        paddleObj.color = theme.paddleColor;
+        // The main game's background drawing will use these COLORS
+    }
+    
+    window.gameEffects = {
+        createDimensionShiftEffect, createBrickBreakEffect,
+        addAnimation, updateAnimations, applyDimensionTheme, dimensionThemes
+    };
+})();
+
+
+// Main Game Logic
+(function() {
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const soundEnableOverlay = document.getElementById('soundEnableOverlay');
     
-    // Game dimensions (logical)
     const GAME_WIDTH = 240;
     const GAME_HEIGHT = 320;
     canvas.width = GAME_WIDTH;
     canvas.height = GAME_HEIGHT;
 
-    // Game states
-    const GAME_STATE = {
-        MENU: 0,
-        PLAYING: 1,
-        GAME_OVER: 2,
-        LEVEL_COMPLETE: 3,
-        PAUSED: 4,
-        DIMENSION_SHIFT: 5
-    };
+    const GAME_STATE = { MENU: 0, PLAYING: 1, GAME_OVER: 2, LEVEL_COMPLETE: 3, PAUSED: 4, DIMENSION_SHIFT: 5 };
+    const DIMENSIONS = { NORMAL: 'NORMAL', CEILING_PADDLE: 'CEILING', TIME: 'TIME' }; // Added TIME
+    let COLORS = { /* This will be populated by applyDimensionTheme */ };
 
-    // Dimensions
-    const DIMENSIONS = {
-        NORMAL: 'NORMAL', // Paddle at bottom, ball breaks bricks above
-        CEILING_PADDLE: 'CEILING' // Paddle at top, ball breaks bricks below
-        // TIME dimension could be re-added if desired
-    };
-
-    // Colors
-    const COLORS = {
-        BACKGROUND_NORMAL: '#00001a',
-        BACKGROUND_CEILING: '#1a0000',
-        BALL: '#FFFFFF',
-        PADDLE: '#0095DD',
-        TEXT: '#FFFFFF',
-        BRICK_COLORS: ['#FF4136', '#FF851B', '#FFDC00', '#2ECC40', '#0074D9', '#B10DC9', '#F012BE'],
-        DIMENSION_BRICK: '#7FDBFF' // Light blue for dimension brick
-    };
-
-    // Game object
     const game = {
-        state: GAME_STATE.MENU,
-        score: 0,
-        lives: 3,
-        level: 1,
-        bricksRemaining: 0,
-        currentDimension: DIMENSIONS.NORMAL,
-        dimensionShiftActive: false,
-        dimensionShiftProgress: 0, // 0 to 1 for animation
-        targetDimension: null,
-        particles: [] // For effects like brick breaking
+        state: GAME_STATE.MENU, score: 0, lives: 3, level: 1, bricksRemaining: 0,
+        currentDimension: DIMENSIONS.NORMAL, dimensionShiftActive: false, targetDimension: null,
+        particles: [], // Main game's simple particles
+        isSoundEnabled: false
     };
 
-    // Control State
-    const controlState = {
-        leftPressed: false,
-        rightPressed: false,
-        touchStartX: 0,
-        touchPaddleOffsetX: 0,
-        isPaddleTouched: false
-    };
-
-    // Ball object
-    const ball = {
-        x: GAME_WIDTH / 2,
-        y: GAME_HEIGHT - 50,
-        radius: 5,
-        baseSpeed: 2.5, // Initial speed magnitude
-        dx: 0,
-        dy: 0,
-        color: COLORS.BALL,
-        isLaunched: false,
-
-        getSpeed: function() {
-            return this.baseSpeed + (game.level - 1) * 0.25; // Speed increases with level
+    const AudioManager = {
+        sounds: {},
+        soundPaths: {
+            brickBreak: 'assets/sounds/breaks/brick_break.wav',
+            specialBrickBreak: 'assets/sounds/breaks/special_brick_break.wav',
+            paddleHit: 'assets/sounds/hits/paddle_hit.mp3',
+            wallHit: 'assets/sounds/hits/wall_hit.mp3',
+            dimensionShift: 'assets/sounds/powerups/dimension_shift.wav',
+            gameOver: 'assets/sounds/powerups/game_over.wav',
+            gameStart: 'assets/sounds/powerups/game_start.wav',
+            levelComplete: 'assets/sounds/powerups/level_complete.mp3'
         },
-
-        draw: function() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.color;
-            ctx.fill();
-            ctx.closePath();
+        loadSound: function(name, path) {
+            const audio = new Audio(path);
+            audio.onerror = () => console.error(`Error loading sound: ${name} at ${path}`);
+            // audio.oncanplaythrough = () => console.log(`Sound loaded: ${name}`);
+            this.sounds[name] = audio;
         },
-
-        update: function() {
-            if (!this.isLaunched) {
-                this.x = paddle.x + paddle.width / 2;
-                if (game.currentDimension === DIMENSIONS.NORMAL) {
-                    this.y = paddle.y - this.radius - 1;
-                } else { // CEILING_PADDLE
-                    this.y = paddle.y + paddle.height + this.radius + 1;
-                }
-                return;
-            }
-
-            this.x += this.dx;
-            this.y += this.dy;
-
-            // Wall collisions (left/right)
-            if (this.x - this.radius < 0 || this.x + this.radius > GAME_WIDTH) {
-                this.dx = -this.dx;
-                this.x = (this.x - this.radius < 0) ? this.radius : GAME_WIDTH - this.radius;
-                 createImpactParticles(this.x, this.y, '#ccc', 3);
-            }
-
-            // Dimension-specific top/bottom/paddle collisions
-            if (game.currentDimension === DIMENSIONS.NORMAL) {
-                // Top wall collision
-                if (this.y - this.radius < 0) {
-                    this.dy = Math.abs(this.dy); // Bounce down
-                    this.y = this.radius;
-                    createImpactParticles(this.x, this.y, '#ccc', 3);
-                }
-                // Paddle collision
-                if (this.dy > 0 && // Moving down
-                    this.y + this.radius >= paddle.y &&
-                    this.y - this.radius < paddle.y + paddle.height && // Ensure it's not past
-                    this.x + this.radius > paddle.x &&
-                    this.x - this.radius < paddle.x + paddle.width) {
-                    
-                    this.dy = -Math.abs(this.dy); // Bounce up
-                    this.y = paddle.y - this.radius; // Position just above paddle
-                    let hitPos = (this.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2); // -1 to 1
-                    this.dx = hitPos * this.getSpeed() * 1.2; // Angle effect, ensure speed magnitude is roughly preserved by normalizing later if needed
-                    normalizeBallSpeed();
-                    createImpactParticles(this.x, paddle.y, paddle.color, 5);
-                }
-                // Bottom edge miss (lose life)
-                if (this.y + this.radius > GAME_HEIGHT) {
-                    loseLife();
-                }
-            } else { // CEILING_PADDLE Dimension
-                // Bottom wall collision (acts as "top" for bricks)
-                if (this.y + this.radius > GAME_HEIGHT) {
-                    this.dy = -Math.abs(this.dy); // Bounce up
-                    this.y = GAME_HEIGHT - this.radius;
-                    createImpactParticles(this.x, this.y, '#ccc', 3);
-                }
-                // Paddle collision (at the top)
-                if (this.dy < 0 && // Moving up
-                    this.y - this.radius <= paddle.y + paddle.height &&
-                    this.y + this.radius > paddle.y && // Ensure it's not past
-                    this.x + this.radius > paddle.x &&
-                    this.x - this.radius < paddle.x + paddle.width) {
-
-                    this.dy = Math.abs(this.dy); // Bounce down
-                    this.y = paddle.y + paddle.height + this.radius; // Position just below paddle
-                    let hitPos = (this.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
-                    this.dx = hitPos * this.getSpeed() * 1.2;
-                    normalizeBallSpeed();
-                    createImpactParticles(this.x, paddle.y + paddle.height, paddle.color, 5);
-                }
-                // Top edge miss (lose life)
-                if (this.y - this.radius < 0) {
-                    loseLife();
-                }
+        loadAllSounds: function() {
+            console.log("Attempting to load sounds...");
+            for (const name in this.soundPaths) {
+                this.loadSound(name, this.soundPaths[name]);
             }
         },
-        reset: function() {
-            this.isLaunched = false;
-            this.x = paddle.x + paddle.width / 2;
-            this.dx = 0; // Will be set on launch
-            if (game.currentDimension === DIMENSIONS.NORMAL) {
-                this.y = paddle.y - this.radius - 1;
-                this.dy = 0; 
-            } else { // CEILING_PADDLE
-                this.y = paddle.y + paddle.height + this.radius + 1;
-                this.dy = 0;
+        playSound: function(name) {
+            if (game.isSoundEnabled && this.sounds[name]) {
+                this.sounds[name].currentTime = 0;
+                this.sounds[name].play().catch(e => console.warn(`Error playing sound ${name}: ${e.message}. User interaction might be needed.`));
             }
         },
-        launch: function() {
-            if (this.isLaunched) return;
-            this.isLaunched = true;
-            const speed = this.getSpeed();
-            if (game.currentDimension === DIMENSIONS.NORMAL) {
-                this.dy = -speed;
-            } else { // CEILING_PADDLE
-                this.dy = speed;
+        enableSounds: function() {
+            if (!game.isSoundEnabled) {
+                game.isSoundEnabled = true;
+                // Try to play a silent sound or a very short one to "unlock" audio context
+                const silentUnlock = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+                silentUnlock.play().catch(()=>{});
+                console.log("Sounds enabled by user action.");
+                this.loadAllSounds(); // Load sounds after user interaction
             }
-            // Give a slight random horizontal direction
-            this.dx = (Math.random() > 0.5 ? 1 : -1) * speed * 0.3;
-            normalizeBallSpeed();
         }
     };
     
-    function normalizeBallSpeed() {
-        const currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
-        const targetSpeed = ball.getSpeed();
-        if (currentSpeed > 0) { // Avoid division by zero
-            ball.dx = (ball.dx / currentSpeed) * targetSpeed;
-            ball.dy = (ball.dy / currentSpeed) * targetSpeed;
-        } else { // If speed is zero (e.g. on launch straight up/down)
-             if (game.currentDimension === DIMENSIONS.NORMAL) ball.dy = -targetSpeed;
-             else ball.dy = targetSpeed;
-             ball.dx = 0; // Or a small random dx
-        }
-    }
+    const controlState = { leftPressed: false, rightPressed: false, touchStartX: 0, touchPaddleOffsetX: 0, isPaddleTouched: false };
 
-
-    // Paddle object
-    const paddle = {
-        width: 60,
-        height: 10,
-        x: (GAME_WIDTH - 60) / 2,
-        y: GAME_HEIGHT - 30, // Default for NORMAL dimension
-        speed: 6,
-        color: COLORS.PADDLE,
-
-        draw: function() {
-            ctx.beginPath();
-            ctx.rect(this.x, this.y, this.width, this.height);
-            ctx.fillStyle = this.color;
-            ctx.fill();
-            ctx.closePath();
+    const ball = {
+        x: GAME_WIDTH / 2, y: GAME_HEIGHT - 50, radius: 5, baseSpeed: 2.5, dx: 0, dy: 0, color: '', isLaunched: false,
+        getSpeed: function() { return this.baseSpeed + (game.level - 1) * 0.2; },
+        draw: function() { /* ... as before ... */ 
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color; ctx.fill(); ctx.closePath();
         },
         update: function() {
-            // Update Y position based on dimension
+            if (!this.isLaunched) { /* ... as before ... */
+                this.x = paddle.x + paddle.width / 2;
+                if (game.currentDimension === DIMENSIONS.NORMAL) this.y = paddle.y - this.radius - 1;
+                else this.y = paddle.y + paddle.height + this.radius + 1;
+                return;
+            }
+            this.x += this.dx; this.y += this.dy;
+
+            // Wall collisions (left/right)
+            if (this.x - this.radius < 0 || this.x + this.radius > GAME_WIDTH) {
+                this.dx = -this.dx; this.x = (this.x - this.radius < 0) ? this.radius : GAME_WIDTH - this.radius;
+                AudioManager.playSound('wallHit'); createImpactParticles(this.x, this.y, '#ccc', 3);
+            }
+            // Dimension-specific
             if (game.currentDimension === DIMENSIONS.NORMAL) {
-                this.y = GAME_HEIGHT - 30;
-            } else { // CEILING_PADDLE
-                this.y = 20; // Near the top
+                if (this.y - this.radius < 0) {
+                    this.dy = Math.abs(this.dy); this.y = this.radius; AudioManager.playSound('wallHit'); createImpactParticles(this.x, this.y, '#ccc', 3);
+                }
+                if (this.dy > 0 && this.y + this.radius >= paddle.y && this.y - this.radius < paddle.y + paddle.height && this.x + this.radius > paddle.x && this.x - this.radius < paddle.x + paddle.width) {
+                    this.dy = -Math.abs(this.dy); this.y = paddle.y - this.radius;
+                    let hitPos = (this.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    this.dx = hitPos * this.getSpeed() * 1.2; normalizeBallSpeed();
+                    AudioManager.playSound('paddleHit'); createImpactParticles(this.x, paddle.y, paddle.color, 5);
+                }
+                if (this.y + this.radius > GAME_HEIGHT) loseLife();
+            } else { // CEILING_PADDLE (or TIME if logic is similar for top/bottom)
+                if (this.y + this.radius > GAME_HEIGHT) {
+                    this.dy = -Math.abs(this.dy); this.y = GAME_HEIGHT - this.radius; AudioManager.playSound('wallHit'); createImpactParticles(this.x, this.y, '#ccc', 3);
+                }
+                if (this.dy < 0 && this.y - this.radius <= paddle.y + paddle.height && this.y + this.radius > paddle.y && this.x + this.radius > paddle.x && this.x - this.radius < paddle.x + paddle.width) {
+                    this.dy = Math.abs(this.dy); this.y = paddle.y + paddle.height + this.radius;
+                    let hitPos = (this.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    this.dx = hitPos * this.getSpeed() * 1.2; normalizeBallSpeed();
+                    AudioManager.playSound('paddleHit'); createImpactParticles(this.x, paddle.y + paddle.height, paddle.color, 5);
+                }
+                if (this.y - this.radius < 0) loseLife();
             }
+        },
+        reset: function() { /* ... as before ... */ 
+            this.isLaunched = false; this.x = paddle.x + paddle.width / 2; this.dx = 0;
+            if (game.currentDimension === DIMENSIONS.NORMAL) this.y = paddle.y - this.radius - 1;
+            else this.y = paddle.y + paddle.height + this.radius + 1;
+        },
+        launch: function() { /* ... as before ... */
+            if (this.isLaunched) return; this.isLaunched = true; const speed = this.getSpeed();
+            if (game.currentDimension === DIMENSIONS.NORMAL) this.dy = -speed; else this.dy = speed;
+            this.dx = (Math.random() > 0.5 ? 1 : -1) * speed * 0.3; normalizeBallSpeed();
+        }
+    };
+    
+    function normalizeBallSpeed() { /* ... as before ... */ 
+        const currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+        const targetSpeed = ball.getSpeed();
+        if (currentSpeed > 0.01) { ball.dx = (ball.dx / currentSpeed) * targetSpeed; ball.dy = (ball.dy / currentSpeed) * targetSpeed; }
+        else { if (game.currentDimension === DIMENSIONS.NORMAL) ball.dy = -targetSpeed; else ball.dy = targetSpeed; ball.dx = 0; }
+    }
 
-            // Handle keyboard/scroll movement
-            if (controlState.leftPressed) {
-                this.x -= this.speed;
-            }
-            if (controlState.rightPressed) {
-                this.x += this.speed;
-            }
-
-            // Clamp paddle position
+    const paddle = {
+        width: 60, height: 10, x: (GAME_WIDTH - 60) / 2, y: GAME_HEIGHT - 30, speed: 6, color: '',
+        draw: function() { /* ... as before ... */
+            ctx.beginPath(); ctx.rect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = this.color; ctx.fill(); ctx.closePath();
+        },
+        update: function() { /* ... as before ... */
+            if (game.currentDimension === DIMENSIONS.NORMAL) this.y = GAME_HEIGHT - 30;
+            else this.y = 20; // Near the top for CEILING or TIME (if paddle at top)
+            if (controlState.leftPressed) this.x -= this.speed;
+            if (controlState.rightPressed) this.x += this.speed;
             this.x = Math.max(0, Math.min(GAME_WIDTH - this.width, this.x));
         },
-        reset: function() {
-            this.width = 60;
-            this.x = (GAME_WIDTH - this.width) / 2;
-            // Y position will be set by update based on dimension
+        reset: function() { /* ... as before ... */ 
+            this.width = 60; this.x = (GAME_WIDTH - this.width) / 2;
         }
     };
 
-    // Brick configuration
     const brickConfig = {
-        rows: 5,
-        cols: 7,
-        get width() { return (GAME_WIDTH - (this.cols + 1) * this.padding) / this.cols; }, // Dynamic width
-        height: 15,
-        padding: 4,
-        offsetTop: 50, // Initial offset from top
-        get offsetLeft() { return this.padding; },
-        dimensionBrickChance: 0.15
+        rows: 5, cols: 7, get width() { return (GAME_WIDTH - (this.cols + 1) * this.padding) / this.cols; },
+        height: 15, padding: 4, offsetTop: 50, get offsetLeft() { return this.padding; },
+        dimensionBrickChance: 0.15, get dimensionBrickPulseRate() { return Date.now() / 300; }
     };
     let bricks = [];
 
-    function initBricks() {
-        bricks = [];
-        game.bricksRemaining = 0;
-        const brickWidth = brickConfig.width; // Calculate once
-
+    function initBricks() { /* ... as before, ensure targetDimension logic is sound ... */
+        bricks = []; game.bricksRemaining = 0; const brickWidth = brickConfig.width;
         for (let r = 0; r < brickConfig.rows; r++) {
             bricks[r] = [];
             for (let c = 0; c < brickConfig.cols; c++) {
                 const brickX = brickConfig.offsetLeft + c * (brickWidth + brickConfig.padding);
                 const brickY = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
-                
                 const isDimensionBrick = Math.random() < brickConfig.dimensionBrickChance;
                 let targetDim = null;
-                if (isDimensionBrick) {
-                    targetDim = (game.currentDimension === DIMENSIONS.NORMAL) ? DIMENSIONS.CEILING_PADDLE : DIMENSIONS.NORMAL;
+                if (isDimensionBrick) { // Cycle through dimensions
+                    const dims = Object.values(DIMENSIONS);
+                    let currentIdx = dims.indexOf(game.currentDimension);
+                    targetDim = dims[(currentIdx + 1) % dims.length]; 
                 }
-
                 bricks[r][c] = {
-                    x: brickX, y: brickY,
-                    width: brickWidth, height: brickConfig.height,
-                    status: 1,
-                    color: isDimensionBrick ? COLORS.DIMENSION_BRICK : COLORS.BRICK_COLORS[(r + c) % COLORS.BRICK_COLORS.length],
-                    isDimensionBrick: isDimensionBrick,
-                    targetDimension: targetDim,
-                    scoreValue: (r + 1) * 10 // More points for higher rows
+                    x: brickX, y: brickY, width: brickWidth, height: brickConfig.height, status: 1,
+                    color: isDimensionBrick ? (gameEffects.dimensionThemes[targetDim.toLowerCase()]?.paddleColor || '#7FDBFF') : COLORS.BRICK_COLORS[(r * brickConfig.cols + c) % COLORS.BRICK_COLORS.length],
+                    isDimensionBrick: isDimensionBrick, targetDimension: targetDim, scoreValue: (r + 1) * 10
                 };
                 game.bricksRemaining++;
             }
         }
     }
 
-    function drawBricks() {
+    function drawBricks() { /* ... add pulsation for dimension bricks ... */
         for (let r = 0; r < brickConfig.rows; r++) {
             for (let c = 0; c < brickConfig.cols; c++) {
                 const brick = bricks[r][c];
                 if (brick.status === 1) {
-                    ctx.beginPath();
-                    ctx.rect(brick.x, brick.y, brick.width, brick.height);
-                    ctx.fillStyle = brick.color;
-                    ctx.fill();
+                    ctx.beginPath(); ctx.rect(brick.x, brick.y, brick.width, brick.height);
+                    ctx.fillStyle = brick.color; ctx.fill();
                     if (brick.isDimensionBrick) {
-                        ctx.strokeStyle = '#FFF';
-                        ctx.lineWidth = 1;
+                        const pulse = Math.abs(Math.sin(brickConfig.dimensionBrickPulseRate)) * 0.5 + 0.5; // 0.5 to 1
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${pulse})`;
+                        ctx.lineWidth = 1 + pulse; // Pulsating line width
                         ctx.strokeRect(brick.x + 1, brick.y + 1, brick.width - 2, brick.height - 2);
                     }
                     ctx.closePath();
@@ -322,357 +426,236 @@
         }
     }
 
-    function brickCollisionDetection() {
+    function brickCollisionDetection() { /* ... use gameEffects.createBrickBreakEffect ... */
         for (let r = 0; r < brickConfig.rows; r++) {
             for (let c = 0; c < brickConfig.cols; c++) {
                 const b = bricks[r][c];
                 if (b.status === 1) {
                     if (ball.x + ball.radius > b.x && ball.x - ball.radius < b.x + b.width &&
                         ball.y + ball.radius > b.y && ball.y - ball.radius < b.y + b.height) {
+                        // ... (collision side detection as before) ...
+                        const prevBallX = ball.x - ball.dx; const prevBallY = ball.y - ball.dy;
+                        if ((prevBallX - ball.radius > b.x + b.width || prevBallX + ball.radius < b.x) && (prevBallY - ball.radius < b.y + b.height && prevBallY + ball.radius > b.y)) ball.dx = -ball.dx;
+                        else if ((prevBallY - ball.radius > b.y + b.height || prevBallY + ball.radius < b.y) && (prevBallX - ball.radius < b.x + b.width && prevBallX + ball.radius > b.x)) ball.dy = -ball.dy;
+                        else ball.dy = -ball.dy;
+
+                        b.status = 0; game.score += b.scoreValue; game.bricksRemaining--;
                         
-                        // Determine collision side
-                        let overlapX = (ball.x < b.x + b.width / 2) ? (b.x + b.width) - (ball.x - ball.radius) : (ball.x + ball.radius) - b.x;
-                        let overlapY = (ball.y < b.y + b.height / 2) ? (b.y + b.height) - (ball.y - ball.radius) : (ball.y + ball.radius) - b.y;
-                        
-                        // Prevent sticking to corners (approximate)
-                        const prevBallX = ball.x - ball.dx;
-                        const prevBallY = ball.y - ball.dy;
+                        const effect = gameEffects.createBrickBreakEffect(ctx, b);
+                        gameEffects.addAnimation(effect);
+                        AudioManager.playSound(b.isDimensionBrick ? 'specialBrickBreak' : 'brickBreak');
 
-                        if ( (prevBallX - ball.radius > b.x + b.width || prevBallX + ball.radius < b.x) && // Was outside horizontally
-                             (prevBallY - ball.radius < b.y + b.height && prevBallY + ball.radius > b.y)      // Was inside vertically
-                           ) {
-                            ball.dx = -ball.dx; // Horizontal collision
-                        } else if ( (prevBallY - ball.radius > b.y + b.height || prevBallY + ball.radius < b.y) && // Was outside vertically
-                                    (prevBallX - ball.radius < b.x + b.width && prevBallX + ball.radius > b.x)       // Was inside horizontally
-                                  ) {
-                            ball.dy = -ball.dy; // Vertical collision
-                        } else { // Corner hit or ambiguous, simple vertical bounce
-                            ball.dy = -ball.dy;
-                        }
-
-                        b.status = 0;
-                        game.score += b.scoreValue;
-                        game.bricksRemaining--;
-                        createImpactParticles(b.x + b.width / 2, b.y + b.height / 2, b.color, 10);
-
-                        if (b.isDimensionBrick && b.targetDimension) {
-                            shiftDimension(b.targetDimension);
-                        }
-
-                        if (game.bricksRemaining === 0) {
-                            game.state = GAME_STATE.LEVEL_COMPLETE;
-                            // Small delay before showing level complete screen to see last brick break
-                            setTimeout(() => { if(game.state === GAME_STATE.LEVEL_COMPLETE) {} /* NOP if state changed*/ }, 500);
-                        }
-                        return; // Handle one collision per frame
+                        if (b.isDimensionBrick && b.targetDimension) shiftDimension(b.targetDimension);
+                        if (game.bricksRemaining === 0) { game.state = GAME_STATE.LEVEL_COMPLETE; AudioManager.playSound('levelComplete');}
+                        return;
                     }
                 }
             }
         }
     }
 
-    // Dimension Shift Logic
     function shiftDimension(newDimension) {
         if (game.dimensionShiftActive) return;
         game.dimensionShiftActive = true;
         game.targetDimension = newDimension;
         game.state = GAME_STATE.DIMENSION_SHIFT;
-        game.dimensionShiftProgress = 0;
+        AudioManager.playSound('dimensionShift');
+        
+        const animation = gameEffects.createDimensionShiftEffect(canvas, ctx, game.currentDimension.toLowerCase(), newDimension.toLowerCase());
+        gameEffects.addAnimation(() => { // Wrap to call completeDimensionShift
+            const done = animation();
+            if (done) completeDimensionShift();
+            return done;
+        });
     }
 
     function completeDimensionShift() {
         game.currentDimension = game.targetDimension;
         game.dimensionShiftActive = false;
-        paddle.reset(); // Reset paddle position for new dimension
-        ball.reset();   // Ball will also reset relative to paddle
-        // Bricks might need repositioning or re-initialization if dimension changes brick layout significantly
-        // For now, we keep the same bricks.
+        gameEffects.applyDimensionTheme(game.currentDimension, game, ball, paddle, COLORS); // Apply new theme
+        paddle.reset(); ball.reset();
         game.state = GAME_STATE.PLAYING;
     }
 
-    function drawDimensionShift() {
-        game.dimensionShiftProgress += 0.02; // Speed of transition
-        if (game.dimensionShiftProgress >= 1) {
-            completeDimensionShift();
-            return;
-        }
-
-        const progress = game.dimensionShiftProgress;
-        ctx.save();
-        // Example: Wipe effect
-        const wipeHeight = GAME_HEIGHT * progress;
-        const oldBg = game.currentDimension === DIMENSIONS.NORMAL ? COLORS.BACKGROUND_NORMAL : COLORS.BACKGROUND_CEILING;
-        const newBg = game.targetDimension === DIMENSIONS.NORMAL ? COLORS.BACKGROUND_NORMAL : COLORS.BACKGROUND_CEILING;
-
-        ctx.fillStyle = oldBg;
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.fillStyle = newBg;
-        ctx.fillRect(0, 0, GAME_WIDTH, wipeHeight);
-        
-        ctx.font = '20px Arial';
-        ctx.fillStyle = COLORS.TEXT;
-        ctx.textAlign = 'center';
-        ctx.fillText(`SHIFTING TO ${game.targetDimension}`, GAME_WIDTH / 2, GAME_HEIGHT / 2);
-        ctx.restore();
-    }
-
-    // Game Flow
+    // Game Flow Functions (startGame, resetGame, nextLevel, loseLife, handleGameAction) - Add AudioManager calls
     function loseLife() {
         game.lives--;
-        createImpactParticles(ball.x, ball.y, 'red', 20, 2); // Bigger explosion for losing life
+        createImpactParticles(ball.x, ball.y, 'red', 20, 2); 
         if (game.lives <= 0) {
-            game.state = GAME_STATE.GAME_OVER;
+            game.state = GAME_STATE.GAME_OVER; AudioManager.playSound('gameOver');
         } else {
-            ball.reset();
-            paddle.reset();
+            ball.reset(); paddle.reset();
         }
     }
-
-    function startGame() {
-        resetGame(); // Full reset for a new game
-        game.state = GAME_STATE.PLAYING;
+    function startGame() { resetGame(); game.state = GAME_STATE.PLAYING; AudioManager.playSound('gameStart'); }
+    function resetGame() { /* ... as before ... apply initial theme */
+        game.score = 0; game.lives = 3; game.level = 1;
+        game.currentDimension = DIMENSIONS.NORMAL;
+        brickConfig.dimensionBrickChance = 0.15; ball.baseSpeed = 2.5;
+        gameEffects.applyDimensionTheme(game.currentDimension, game, ball, paddle, COLORS); // Initial theme
+        paddle.reset(); ball.reset(); initBricks();
     }
-    
-    function resetGame() { // Called for new game from menu or game over
-        game.score = 0;
-        game.lives = 3;
-        game.level = 1;
-        game.currentDimension = DIMENSIONS.NORMAL; // Start in normal
-        brickConfig.dimensionBrickChance = 0.15;
-        ball.baseSpeed = 2.5;
-        paddle.reset();
-        ball.reset();
-        initBricks();
-    }
-
-    function nextLevel() {
-        game.level++;
-        ball.baseSpeed += 0.15;
+    function nextLevel() { /* ... as before ... */
+        game.level++; ball.baseSpeed += 0.15;
         brickConfig.dimensionBrickChance = Math.min(0.4, brickConfig.dimensionBrickChance + 0.05);
-        paddle.reset();
-        ball.reset();
-        initBricks();
-        game.state = GAME_STATE.PLAYING;
+        // Potentially shift dimension on level up? For now, keep current.
+        gameEffects.applyDimensionTheme(game.currentDimension, game, ball, paddle, COLORS);
+        paddle.reset(); ball.reset(); initBricks(); game.state = GAME_STATE.PLAYING;
+        // AudioManager.playSound('levelComplete'); // Already played when state set
     }
-
-    function handleGameAction() { // Unified action: tap, spacebar
+    function handleGameAction() { /* ... as before ... */ 
         switch (game.state) {
-            case GAME_STATE.MENU:
-                startGame();
-                break;
-            case GAME_STATE.PLAYING:
-                if (!ball.isLaunched) {
-                    ball.launch();
-                } else {
-                    // Could implement a pause toggle here if desired
-                    // game.state = GAME_STATE.PAUSED;
-                }
-                break;
-            case GAME_STATE.GAME_OVER:
-                game.state = GAME_STATE.MENU; // Go back to menu
-                break;
-            case GAME_STATE.LEVEL_COMPLETE:
-                nextLevel();
-                break;
-            case GAME_STATE.PAUSED:
-                game.state = GAME_STATE.PLAYING;
-                break;
+            case GAME_STATE.MENU: startGame(); break;
+            case GAME_STATE.PLAYING: if (!ball.isLaunched) ball.launch(); break;
+            case GAME_STATE.GAME_OVER: game.state = GAME_STATE.MENU; break;
+            case GAME_STATE.LEVEL_COMPLETE: nextLevel(); break;
+            case GAME_STATE.PAUSED: game.state = GAME_STATE.PLAYING; break;
         }
     }
 
-    // Drawing UI
+    // Drawing UI (drawScore, drawLives, drawLevel, drawMenu, drawGameOver, drawLevelComplete, drawPaused) - Use COLORS from theme
     function drawScore() { ctx.font = '16px Arial'; ctx.fillStyle = COLORS.TEXT; ctx.textAlign = 'left'; ctx.fillText(`Score: ${game.score}`, 10, 20); }
     function drawLives() { ctx.font = '16px Arial'; ctx.fillStyle = COLORS.TEXT; ctx.textAlign = 'right'; ctx.fillText(`Lives: ${game.lives}`, GAME_WIDTH - 10, 20); }
-    function drawLevel() { ctx.font = '12px Arial'; ctx.fillStyle = COLORS.TEXT; ctx.textAlign = 'center'; ctx.fillText(`Lvl: ${game.level} Dim: ${game.currentDimension}`, GAME_WIDTH / 2, 20); }
-
-    function drawMenu() {
-        drawBackground();
-        ctx.fillStyle = COLORS.TEXT; ctx.font = '28px Arial'; ctx.textAlign = 'center';
-        ctx.fillText('BRICK BUSTER', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60);
-        ctx.font = '18px Arial';
-        ctx.fillText('Tap or Press Space to Start', GAME_WIDTH / 2, GAME_HEIGHT / 2);
-        ctx.font = '14px Arial';
-        ctx.fillText('Drag/Arrows/Scroll to Move Paddle', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
+    function drawLevel() { ctx.font = '12px Arial'; ctx.fillStyle = COLORS.TEXT; ctx.textAlign = 'center'; ctx.fillText(`Lvl: ${game.level} Dim: ${game.currentDimension.substring(0,4)}`, GAME_WIDTH / 2, 20); }
+    function drawMenu() { /* ... use COLORS.TEXT ... */
+        drawBackground(); ctx.fillStyle = COLORS.TEXT; ctx.font = '28px Arial'; ctx.textAlign = 'center';
+        ctx.fillText('BRICK BUSTER DX', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60);
+        ctx.font = '18px Arial'; ctx.fillText('Tap or Press Space to Start', GAME_WIDTH / 2, GAME_HEIGHT / 2);
+        ctx.font = '14px Arial'; ctx.fillText('Drag/Arrows/Scroll to Move', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
     }
-    function drawGameOver() {
-        drawBackground();
-        ctx.fillStyle = COLORS.TEXT; ctx.font = '28px Arial'; ctx.textAlign = 'center';
+    function drawGameOver() { /* ... use COLORS.TEXT ... */
+        drawBackground(); ctx.fillStyle = COLORS.TEXT; ctx.font = '28px Arial'; ctx.textAlign = 'center';
         ctx.fillText('GAME OVER', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40);
-        ctx.font = '20px Arial';
-        ctx.fillText(`Final Score: ${game.score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2);
-        ctx.font = '16px Arial';
-        ctx.fillText('Tap or Space to Menu', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40);
+        ctx.font = '20px Arial'; ctx.fillText(`Final Score: ${game.score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2);
+        ctx.font = '16px Arial'; ctx.fillText('Tap or Space to Menu', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40);
     }
-    function drawLevelComplete() {
-        drawBackground();
-        ctx.fillStyle = COLORS.TEXT; ctx.font = '24px Arial'; ctx.textAlign = 'center';
+    function drawLevelComplete() { /* ... use COLORS.TEXT ... */
+        drawBackground(); ctx.fillStyle = COLORS.TEXT; ctx.font = '24px Arial'; ctx.textAlign = 'center';
         ctx.fillText('LEVEL COMPLETE!', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40);
-        ctx.font = '20px Arial';
-        ctx.fillText(`Score: ${game.score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2);
-        ctx.font = '16px Arial';
-        ctx.fillText('Tap or Space for Next Level', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40);
+        ctx.font = '20px Arial'; ctx.fillText(`Score: ${game.score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2);
+        ctx.font = '16px Arial'; ctx.fillText('Tap or Space for Next Level', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40);
     }
-     function drawPaused() {
-        // Draw playing field underneath
-        drawBricks(); paddle.draw(); ball.draw();
-        drawScore(); drawLives(); drawLevel();
-
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    function drawPaused() { /* ... as before ... */
+        drawBricks(); paddle.draw(); ball.draw(); drawScore(); drawLives(); drawLevel();
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         ctx.fillStyle = COLORS.TEXT; ctx.font = '24px Arial'; ctx.textAlign = 'center';
         ctx.fillText('PAUSED', GAME_WIDTH / 2, GAME_HEIGHT / 2);
-        ctx.font = '16px Arial';
-        ctx.fillText('Tap or Space to Resume', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
+        ctx.font = '16px Arial'; ctx.fillText('Tap or Space to Resume', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
     }
 
-
-    // Particle System
-    function createImpactParticles(x, y, color, count, speedMultiplier = 1) {
+    // Main game's Particle System (for simple impacts)
+    function createImpactParticles(x, y, color, count, speedMultiplier = 1) { /* ... as before ... */
         for (let i = 0; i < count; i++) {
             game.particles.push({
-                x: x, y: y,
-                size: Math.random() * 2 + 1,
-                color: color,
-                vx: (Math.random() - 0.5) * 2 * speedMultiplier,
-                vy: (Math.random() - 0.5) * 2 * speedMultiplier,
-                life: Math.random() * 30 + 20 // Frames
+                x: x, y: y, size: Math.random() * 2 + 1, color: color,
+                vx: (Math.random() - 0.5) * 2 * speedMultiplier, vy: (Math.random() - 0.5) * 2 * speedMultiplier,
+                life: Math.random() * 30 + 20 
             });
         }
     }
-
-    function updateParticles() {
+    function updateParticles() { /* ... as before ... */
         for (let i = game.particles.length - 1; i >= 0; i--) {
-            const p = game.particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life--;
-            if (p.life <= 0) {
-                game.particles.splice(i, 1);
-            }
+            const p = game.particles[i]; p.x += p.vx; p.y += p.vy; p.life--;
+            if (p.life <= 0) game.particles.splice(i, 1);
         }
     }
-
-    function drawParticles() {
+    function drawParticles() { /* ... as before ... */
         game.particles.forEach(p => {
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = p.life / 50; // Fade out
+            ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 50; 
             ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
             ctx.globalAlpha = 1.0;
         });
     }
 
-
-    // Controls
-    function initControls() {
-        // Keyboard
+    // Controls (initControls, event listeners) - Ensure touch uses canvas relative coords
+    function initControls() { /* ... as before, with refined touch ... */
         document.addEventListener('keydown', e => {
-            if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key.toLowerCase() === 'a') controlState.leftPressed = true;
-            if (e.key === 'ArrowRight' || e.key === 'Right' || e.key.toLowerCase() === 'd') controlState.rightPressed = true;
-            if (e.key === 'ArrowDown' || e.key === 'Down') controlState.leftPressed = true; // Alt control
-            if (e.key === 'ArrowUp' || e.key === 'Up') controlState.rightPressed = true;     // Alt control
-            if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
-                e.preventDefault(); // Prevent page scroll on space
-                handleGameAction();
-            }
-            if (e.key.toLowerCase() === 'p') { // Pause
+            if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') controlState.leftPressed = true;
+            if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') controlState.rightPressed = true;
+            if (e.key === 'ArrowDown') controlState.leftPressed = true; 
+            if (e.key === 'ArrowUp') controlState.rightPressed = true;    
+            if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') { e.preventDefault(); handleGameAction(); }
+            if (e.key.toLowerCase() === 'p') {
                  if (game.state === GAME_STATE.PLAYING) game.state = GAME_STATE.PAUSED;
                  else if (game.state === GAME_STATE.PAUSED) game.state = GAME_STATE.PLAYING;
             }
         });
         document.addEventListener('keyup', e => {
-            if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key.toLowerCase() === 'a') controlState.leftPressed = false;
-            if (e.key === 'ArrowRight' || e.key === 'Right' || e.key.toLowerCase() === 'd') controlState.rightPressed = false;
-            if (e.key === 'ArrowDown' || e.key === 'Down') controlState.leftPressed = false;
-            if (e.key === 'ArrowUp' || e.key === 'Up') controlState.rightPressed = false;
+            if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') controlState.leftPressed = false;
+            if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') controlState.rightPressed = false;
+            if (e.key === 'ArrowDown') controlState.leftPressed = false;
+            if (e.key === 'ArrowUp') controlState.rightPressed = false;
         });
 
-        // Touch
-        let touchStartTime = 0;
-        let tapMaxDuration = 200; // ms
-        let tapMaxMovement = 10; // pixels
-
-        canvas.addEventListener('touchstart', e => {
-            e.preventDefault();
-            const touch = e.touches[0];
+        let touchStartTime = 0; const tapMaxDuration = 200; const tapMaxMovement = 15;
+        function getTouchPos(touchEvent) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            // For multi-touch, use the first changed touch for end, or first active touch for start/move
+            const t = touchEvent.changedTouches ? touchEvent.changedTouches[0] : touchEvent.touches[0];
+            return {
+                x: (t.clientX - rect.left) * scaleX,
+                y: (t.clientY - rect.top) * scaleY,
+                rawX: t.clientX // For tap movement detection
+            };
+        }
 
-            controlState.touchStartX = touch.clientX; // Store initial X for tap detection
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault(); if (!e.touches.length) return;
+            const pos = getTouchPos(e);
+            controlState.touchStartX = pos.rawX; 
             touchStartTime = Date.now();
             
-            // Check if touch is on/near paddle for direct drag
-            // For mobile, a larger touch area at the bottom is better than precise paddle hit
-            let touchYCanvas = (touch.clientY - rect.top) * (canvas.height / rect.height);
-            let effectivePaddleY = (game.currentDimension === DIMENSIONS.NORMAL) ? paddle.y - 20 : paddle.y - paddle.height + 20;
-            let touchZoneHeight = 60; // Generous touch zone for paddle
-            
-            if ( (game.currentDimension === DIMENSIONS.NORMAL && touchYCanvas > GAME_HEIGHT - touchZoneHeight) ||
-                 (game.currentDimension === DIMENSIONS.CEILING_PADDLE && touchYCanvas < touchZoneHeight) ) {
+            let touchZoneHeight = 80; // Generous touch zone
+            if ( (game.currentDimension === DIMENSIONS.NORMAL && pos.y > GAME_HEIGHT - touchZoneHeight) ||
+                 (game.currentDimension !== DIMENSIONS.NORMAL && pos.y < touchZoneHeight) ) { // For CEILING or TIME if paddle top
                 controlState.isPaddleTouched = true;
-                let touchXCanvas = (touch.clientX - rect.left) * scaleX;
-                controlState.touchPaddleOffsetX = paddle.x - (touchXCanvas - paddle.width / 2);
-                // Directly move paddle for responsiveness
-                paddle.x = (touchXCanvas - paddle.width / 2) - controlState.touchPaddleOffsetX;
-            } else {
-                controlState.isPaddleTouched = false;
-            }
-
+                controlState.touchPaddleOffsetX = paddle.x - (pos.x - paddle.width / 2);
+                paddle.x = (pos.x - paddle.width / 2) - controlState.touchPaddleOffsetX; // Direct move
+            } else { controlState.isPaddleTouched = false; }
         }, { passive: false });
 
         canvas.addEventListener('touchmove', e => {
-            e.preventDefault();
-            if (!e.touches.length) return;
+            e.preventDefault(); if (!e.touches.length) return;
             if (controlState.isPaddleTouched) {
-                const touch = e.touches[0];
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                let touchXCanvas = (touch.clientX - rect.left) * scaleX;
-                paddle.x = (touchXCanvas - paddle.width / 2) - controlState.touchPaddleOffsetX;
+                const pos = getTouchPos(e);
+                paddle.x = (pos.x - paddle.width / 2) - controlState.touchPaddleOffsetX;
             }
         }, { passive: false });
 
         canvas.addEventListener('touchend', e => {
-            e.preventDefault();
+            e.preventDefault(); 
             const touchDuration = Date.now() - touchStartTime;
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchMoveDistance = Math.abs(touchEndX - controlState.touchStartX);
+            const pos = getTouchPos(e);
+            const touchMoveDistance = Math.abs(pos.rawX - controlState.touchStartX);
 
             if (touchDuration < tapMaxDuration && touchMoveDistance < tapMaxMovement && !controlState.isPaddleTouched) {
-                handleGameAction(); // Considered a tap
+                handleGameAction(); 
             }
             controlState.isPaddleTouched = false;
         }, { passive: false });
 
-        // Scroll Wheel
-        canvas.addEventListener('wheel', e => {
+        canvas.addEventListener('wheel', e => { /* ... as before ... */
             e.preventDefault();
-            if (e.deltaY < 0) { // Scroll up
-                controlState.rightPressed = true;
-                controlState.leftPressed = false;
-            } else if (e.deltaY > 0) { // Scroll down
-                controlState.leftPressed = true;
-                controlState.rightPressed = false;
-            }
-            // Auto-release after a short delay for nudge effect
-            setTimeout(() => {
-                controlState.leftPressed = false;
-                controlState.rightPressed = false;
-            }, 100);
+            if (e.deltaY < 0) { controlState.rightPressed = true; controlState.leftPressed = false; }
+            else if (e.deltaY > 0) { controlState.leftPressed = true; controlState.rightPressed = false; }
+            setTimeout(() => { controlState.leftPressed = false; controlState.rightPressed = false; }, 100);
         }, { passive: false });
     }
     
     // Game Loop
-    function update() {
+    function update(deltaTime) {
         if (game.state === GAME_STATE.PLAYING) {
-            paddle.update();
-            ball.update();
-            brickCollisionDetection();
+            paddle.update(); ball.update(); brickCollisionDetection();
         }
-        updateParticles(); // Always update particles for effects during transitions
+        updateParticles(); 
+        // gameEffects.updateAnimations(ctx); // This is now called in render to draw on top
     }
 
     function drawBackground() {
-        ctx.fillStyle = (game.currentDimension === DIMENSIONS.NORMAL) ? COLORS.BACKGROUND_NORMAL : COLORS.BACKGROUND_CEILING;
+        const theme = gameEffects.dimensionThemes[game.currentDimension.toLowerCase()] || gameEffects.dimensionThemes.normal;
+        ctx.fillStyle = theme.background;
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     }
 
@@ -681,84 +664,59 @@
         drawBackground();
 
         switch (game.state) {
-            case GAME_STATE.MENU:
-                drawMenu();
-                break;
+            case GAME_STATE.MENU: drawMenu(); break;
             case GAME_STATE.PLAYING:
-                drawBricks();
-                paddle.draw();
-                ball.draw();
-                drawScore();
-                drawLives();
-                drawLevel();
-                break;
-            case GAME_STATE.GAME_OVER:
-                drawGameOver();
-                break;
-            case GAME_STATE.LEVEL_COMPLETE:
-                drawLevelComplete();
-                break;
-            case GAME_STATE.PAUSED:
-                drawPaused();
-                break;
-            case GAME_STATE.DIMENSION_SHIFT:
-                // Draw current game elements "behind" the shift animation
                 drawBricks(); paddle.draw(); ball.draw();
                 drawScore(); drawLives(); drawLevel();
-                // Then draw the shift animation on top
-                drawDimensionShift();
+                break;
+            case GAME_STATE.GAME_OVER: drawGameOver(); break;
+            case GAME_STATE.LEVEL_COMPLETE: drawLevelComplete(); break;
+            case GAME_STATE.PAUSED: drawPaused(); break;
+            case GAME_STATE.DIMENSION_SHIFT:
+                // Dimension shift effect draws itself fully via gameEffects.updateAnimations
+                // We can draw static UI on top if needed, or let the effect cover everything
+                drawScore(); drawLives(); drawLevel(); // Show UI under/during shift
                 break;
         }
-        drawParticles(); // Draw particles on top of everything
+        drawParticles(); // Draw main game's simple particles
+        gameEffects.updateAnimations(ctx); // Draw active game effects (like dimension shift, brick breaks)
     }
 
     let lastTime = 0;
     function gameLoop(timestamp) {
-        const deltaTime = timestamp - lastTime;
-        lastTime = timestamp;
-
-        update(deltaTime);
-        render();
-
-        requestAnimationFrame(gameLoop);
+        const deltaTime = timestamp - lastTime; lastTime = timestamp;
+        update(deltaTime); render(); requestAnimationFrame(gameLoop);
     }
 
-    // Resize handling
-    function handleResize() {
+    function handleResize() { /* ... as before ... */
         const container = document.querySelector('.game-container');
         const aspectRatio = GAME_WIDTH / GAME_HEIGHT;
-        
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-
+        const containerWidth = container.clientWidth; const containerHeight = container.clientHeight;
         let newCanvasWidth, newCanvasHeight;
-
-        if (containerWidth / containerHeight > aspectRatio) {
-            // Container is wider than game aspect ratio, so height is the constraint
-            newCanvasHeight = containerHeight;
-            newCanvasWidth = newCanvasHeight * aspectRatio;
-        } else {
-            // Container is taller, so width is the constraint
-            newCanvasWidth = containerWidth;
-            newCanvasHeight = newCanvasWidth / aspectRatio;
-        }
-
-        canvas.style.width = `${newCanvasWidth}px`;
-        canvas.style.height = `${newCanvasHeight}px`;
+        if (containerWidth / containerHeight > aspectRatio) { newCanvasHeight = containerHeight; newCanvasWidth = newCanvasHeight * aspectRatio; }
+        else { newCanvasWidth = containerWidth; newCanvasHeight = newCanvasWidth / aspectRatio; }
+        canvas.style.width = `${newCanvasWidth}px`; canvas.style.height = `${newCanvasHeight}px`;
     }
 
-    // Initialization
     function init() {
-        window.addEventListener('resize', handleResize);
-        handleResize(); // Initial size
+        soundEnableOverlay.style.display = 'flex'; // Show overlay
+        soundEnableOverlay.addEventListener('click', () => {
+            AudioManager.enableSounds();
+            soundEnableOverlay.style.display = 'none';
+            if (game.state === GAME_STATE.MENU) { // If game hasn't started from other means
+                // startGame(); // Optionally auto-start, or wait for another tap via handleGameAction
+            }
+        }, { once: true });
+
+
+        window.addEventListener('resize', handleResize); handleResize();
         initControls();
-        resetGame(); // Prepare initial game state (but stay in menu)
-        game.state = GAME_STATE.MENU; // Ensure start in menu
+        COLORS.BRICK_COLORS = ['#FF4136', '#FF851B', '#FFDC00', '#2ECC40', '#0074D9', '#B10DC9', '#F012BE']; // Set default brick colors
+        resetGame(); 
+        game.state = GAME_STATE.MENU;
         requestAnimationFrame(gameLoop);
     }
-
     window.addEventListener('load', init);
-
 })();
 </script>
 </body>
