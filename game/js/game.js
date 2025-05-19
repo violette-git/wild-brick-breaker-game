@@ -53,273 +53,273 @@
     };
 
     // Controls handling for Brick Breaker game
-    // (function() {
-    //     // Control state
-    //     const controlState = {
-    //         leftPressed: false,
-    //         rightPressed: false,
-    //         paddleSpeed: 5, // Default paddle speed (used by paddle.dx, not directly here anymore)
-    //         touchSensitivity: 1.0 // Default touch sensitivity (adjustable)
-    //     };
+    (function() {
+        // Control state
+        const controlState = {
+            leftPressed: false,
+            rightPressed: false,
+            paddleSpeed: 5, // Default paddle speed (used by paddle.dx, not directly here anymore)
+            touchSensitivity: 1.0 // Default touch sensitivity (adjustable)
+        };
         
-    //     // Touch control variables
-    //     let touchStartX = 0;
-    //     let touchStartY = 0;
-    //     let touchEndX = 0;
-    //     let touchEndY = 0;
-    //     let touchStartTime = 0;
-    //     let isTouching = false;
-    //     let lastSwipeVelocity = 0; // This will carry the velocity for the game to use
-    //     let swipeDirection = null; // 'left', 'right', 'up', 'down'
+        // Touch control variables
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        let touchStartTime = 0;
+        let isTouching = false;
+        let lastSwipeVelocity = 0; // This will carry the velocity for the game to use
+        let swipeDirection = null; // 'left', 'right', 'up', 'down'
         
-    //     // Initialize keyboard controls
-    //     function initKeyboardControls() {
-    //         document.addEventListener('keydown', handleKeyDown);
-    //         document.addEventListener('keyup', handleKeyUp);
-    //     }
+        // Initialize keyboard controls
+        function initKeyboardControls() {
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+        }
         
-    //     // Handle key down events
-    //     function handleKeyDown(e) {
-    //         let stateChanged = false;
-    //         if (e.key === 'ArrowLeft' || e.key === 'Left') {
-    //             controlState.leftPressed = true; stateChanged = true;
-    //         } else if (e.key === 'ArrowRight' || e.key === 'Right') {
-    //             controlState.rightPressed = true; stateChanged = true;
-    //         } else if (e.key === 'ArrowDown' || e.key === 'Down') { // New: Down arrow for left
-    //             controlState.leftPressed = true; stateChanged = true;
-    //         } else if (e.key === 'ArrowUp' || e.key === 'Up') { // New: Up arrow for right
-    //             controlState.rightPressed = true; stateChanged = true;
-    //         } else if (e.key === ' ' || e.key === 'Spacebar') {
-    //             if (window.gameControls && window.gameControls.pressSpacebar) {
-    //                 window.gameControls.pressSpacebar();
-    //             }
-    //         }
+        // Handle key down events
+        function handleKeyDown(e) {
+            let stateChanged = false;
+            if (e.key === 'ArrowLeft' || e.key === 'Left') {
+                controlState.leftPressed = true; stateChanged = true;
+            } else if (e.key === 'ArrowRight' || e.key === 'Right') {
+                controlState.rightPressed = true; stateChanged = true;
+            } else if (e.key === 'ArrowDown' || e.key === 'Down') { // New: Down arrow for left
+                controlState.leftPressed = true; stateChanged = true;
+            } else if (e.key === 'ArrowUp' || e.key === 'Up') { // New: Up arrow for right
+                controlState.rightPressed = true; stateChanged = true;
+            } else if (e.key === ' ' || e.key === 'Spacebar') {
+                if (window.gameControls && window.gameControls.pressSpacebar) {
+                    window.gameControls.pressSpacebar();
+                }
+            }
 
-    //         if (stateChanged) {
-    //             // For keyboard, there's no "swipe velocity" to pass.
-    //             // Pass 0, or let current `lastSwipeVelocity` pass if we want combined inputs (complex).
-    //             // Simpler: keyboard input implies no new swipe velocity.
-    //             // However, `updatePaddleMovement` sends `lastSwipeVelocity`.
-    //             // If a swipe just ended, `lastSwipeVelocity` could be non-zero.
-    //             // Keyboard should override this. Let's ensure `lastSwipeVelocity` is 0 for pure key events.
-    //             // No, let `updatePaddleMovement` be general. `gameControls.setPaddleMovement` needs to be smart.
-    //             // For now, keep it simple: keys set direction, swipe sets direction + velocity.
-    //             updatePaddleMovement();
-    //         }
-    //     }
+            if (stateChanged) {
+                // For keyboard, there's no "swipe velocity" to pass.
+                // Pass 0, or let current `lastSwipeVelocity` pass if we want combined inputs (complex).
+                // Simpler: keyboard input implies no new swipe velocity.
+                // However, `updatePaddleMovement` sends `lastSwipeVelocity`.
+                // If a swipe just ended, `lastSwipeVelocity` could be non-zero.
+                // Keyboard should override this. Let's ensure `lastSwipeVelocity` is 0 for pure key events.
+                // No, let `updatePaddleMovement` be general. `gameControls.setPaddleMovement` needs to be smart.
+                // For now, keep it simple: keys set direction, swipe sets direction + velocity.
+                updatePaddleMovement();
+            }
+        }
         
-    //     // Handle key up events
-    //     function handleKeyUp(e) {
-    //         let stateChanged = false;
-    //         if (e.key === 'ArrowLeft' || e.key === 'Left') {
-    //             controlState.leftPressed = false; stateChanged = true;
-    //         } else if (e.key === 'ArrowRight' || e.key === 'Right') {
-    //             controlState.rightPressed = false; stateChanged = true;
-    //         } else if (e.key === 'ArrowDown' || e.key === 'Down') {
-    //             controlState.leftPressed = false; stateChanged = true;
-    //         } else if (e.key === 'ArrowUp' || e.key === 'Up') {
-    //             controlState.rightPressed = false; stateChanged = true;
-    //         }
+        // Handle key up events
+        function handleKeyUp(e) {
+            let stateChanged = false;
+            if (e.key === 'ArrowLeft' || e.key === 'Left') {
+                controlState.leftPressed = false; stateChanged = true;
+            } else if (e.key === 'ArrowRight' || e.key === 'Right') {
+                controlState.rightPressed = false; stateChanged = true;
+            } else if (e.key === 'ArrowDown' || e.key === 'Down') {
+                controlState.leftPressed = false; stateChanged = true;
+            } else if (e.key === 'ArrowUp' || e.key === 'Up') {
+                controlState.rightPressed = false; stateChanged = true;
+            }
 
-    //         if (stateChanged) {
-    //             updatePaddleMovement();
-    //         }
-    //     }
+            if (stateChanged) {
+                updatePaddleMovement();
+            }
+        }
         
-    //     // Update paddle movement based on control state
-    //     function updatePaddleMovement() {
-    //         if (window.gameControls && window.gameControls.setPaddleMovement) {
-    //             // Pass the current directional state and the last calculated swipe velocity.
-    //             // The game (paddle.swipeVelocity) will use this for momentum if applicable.
-    //             window.gameControls.setPaddleMovement(
-    //                 controlState.leftPressed,
-    //                 controlState.rightPressed,
-    //                 lastSwipeVelocity // This is crucial for touch momentum
-    //             );
-    //         }
-    //     }
+        // Update paddle movement based on control state
+        function updatePaddleMovement() {
+            if (window.gameControls && window.gameControls.setPaddleMovement) {
+                // Pass the current directional state and the last calculated swipe velocity.
+                // The game (paddle.swipeVelocity) will use this for momentum if applicable.
+                window.gameControls.setPaddleMovement(
+                    controlState.leftPressed,
+                    controlState.rightPressed,
+                    lastSwipeVelocity // This is crucial for touch momentum
+                );
+            }
+        }
         
-    //     // Initialize touch controls
-    //     function initTouchControls() {
-    //         const localCanvas = document.getElementById('gameCanvas'); // Use local var
-    //         if (!localCanvas) {
-    //             console.error("Touch controls: gameCanvas not found!");
-    //             return;
-    //         }
+        // Initialize touch controls
+        function initTouchControls() {
+            const localCanvas = document.getElementById('gameCanvas'); // Use local var
+            if (!localCanvas) {
+                console.error("Touch controls: gameCanvas not found!");
+                return;
+            }
             
-    //         localCanvas.addEventListener('touchstart', function(e) {
-    //             e.preventDefault();
-    //             isTouching = true;
-    //             touchStartX = e.touches[0].clientX;
-    //             touchStartY = e.touches[0].clientY;
-    //             touchEndX = touchStartX; // Initialize touchEnd
-    //             touchEndY = touchStartY; // Initialize touchEnd
-    //             touchStartTime = Date.now();
+            localCanvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                isTouching = true;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchEndX = touchStartX; // Initialize touchEnd
+                touchEndY = touchStartY; // Initialize touchEnd
+                touchStartTime = Date.now();
                 
-    //             lastSwipeVelocity = 0; // Reset swipe velocity at the start of a new touch
-    //             swipeDirection = null;
+                lastSwipeVelocity = 0; // Reset swipe velocity at the start of a new touch
+                swipeDirection = null;
                 
-    //             // Initial state for touch: not moving, velocity 0
-    //             controlState.leftPressed = false;
-    //             controlState.rightPressed = false;
-    //             updatePaddleMovement();
-    //         }, { passive: false });
+                // Initial state for touch: not moving, velocity 0
+                controlState.leftPressed = false;
+                controlState.rightPressed = false;
+                updatePaddleMovement();
+            }, { passive: false });
             
-    //         localCanvas.addEventListener('touchmove', function(e) {
-    //             e.preventDefault();
-    //             if (isTouching) {
-    //                 touchEndX = e.touches[0].clientX;
-    //                 touchEndY = e.touches[0].clientY;
+            localCanvas.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+                if (isTouching) {
+                    touchEndX = e.touches[0].clientX;
+                    touchEndY = e.touches[0].clientY;
                     
-    //                 const deltaX = touchEndX - touchStartX;
-    //                 const deltaY = touchEndY - touchStartY;
-    //                 const touchTime = Math.max(1, Date.now() - touchStartTime); // Avoid division by zero
+                    const deltaX = touchEndX - touchStartX;
+                    const deltaY = touchEndY - touchStartY;
+                    const touchTime = Math.max(1, Date.now() - touchStartTime); // Avoid division by zero
                     
-    //                 const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / touchTime;
-    //                 lastSwipeVelocity = velocity * controlState.touchSensitivity * 50; // Scale factor
+                    const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / touchTime;
+                    lastSwipeVelocity = velocity * controlState.touchSensitivity * 50; // Scale factor
                     
-    //                 // Determine primary swipe direction
-    //                 controlState.leftPressed = false; // Reset direction flags
-    //                 controlState.rightPressed = false;
+                    // Determine primary swipe direction
+                    controlState.leftPressed = false; // Reset direction flags
+                    controlState.rightPressed = false;
 
-    //                 if (Math.abs(deltaX) > Math.abs(deltaY) * 0.5) { // Prefer horizontal
-    //                     if (deltaX < 0) {
-    //                         swipeDirection = 'left';
-    //                         controlState.leftPressed = true;
-    //                     } else {
-    //                         swipeDirection = 'right';
-    //                         controlState.rightPressed = true;
-    //                     }
-    //                 } else if (Math.abs(deltaY) > Math.abs(deltaX) * 2) { // Strong vertical for up/down mapping
-    //                     if (deltaY < 0) { // Up swipe - map to right
-    //                         swipeDirection = 'up';
-    //                         controlState.rightPressed = true;
-    //                     } else { // Down swipe - map to left
-    //                         swipeDirection = 'down';
-    //                         controlState.leftPressed = true;
-    //                     }
-    //                 } else {
-    //                     swipeDirection = null; // No clear dominant direction for paddle
-    //                     lastSwipeVelocity = 0; // Don't use velocity from ambiguous move
-    //                 }
-    //                 updatePaddleMovement();
-    //             }
-    //         }, { passive: false });
+                    if (Math.abs(deltaX) > Math.abs(deltaY) * 0.5) { // Prefer horizontal
+                        if (deltaX < 0) {
+                            swipeDirection = 'left';
+                            controlState.leftPressed = true;
+                        } else {
+                            swipeDirection = 'right';
+                            controlState.rightPressed = true;
+                        }
+                    } else if (Math.abs(deltaY) > Math.abs(deltaX) * 2) { // Strong vertical for up/down mapping
+                        if (deltaY < 0) { // Up swipe - map to right
+                            swipeDirection = 'up';
+                            controlState.rightPressed = true;
+                        } else { // Down swipe - map to left
+                            swipeDirection = 'down';
+                            controlState.leftPressed = true;
+                        }
+                    } else {
+                        swipeDirection = null; // No clear dominant direction for paddle
+                        lastSwipeVelocity = 0; // Don't use velocity from ambiguous move
+                    }
+                    updatePaddleMovement();
+                }
+            }, { passive: false });
             
-    //         localCanvas.addEventListener('touchend', function(e) {
-    //             e.preventDefault();
-    //             if (isTouching) {
-    //                 isTouching = false;
-    //                 const deltaX = touchEndX - touchStartX;
-    //                 const deltaY = touchEndY - touchStartY;
-    //                 const touchTime = Math.max(1, Date.now() - touchStartTime);
+            localCanvas.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                if (isTouching) {
+                    isTouching = false;
+                    const deltaX = touchEndX - touchStartX;
+                    const deltaY = touchEndY - touchStartY;
+                    const touchTime = Math.max(1, Date.now() - touchStartTime);
                     
-    //                 if (touchTime > 50 && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) { // Deliberate swipe
-    //                     const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / touchTime;
-    //                     lastSwipeVelocity = velocity * controlState.touchSensitivity * 50;
+                    if (touchTime > 50 && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) { // Deliberate swipe
+                        const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / touchTime;
+                        lastSwipeVelocity = velocity * controlState.touchSensitivity * 50;
                         
-    //                     // Set controlState based on final swipe direction for the momentum period
-    //                     if (swipeDirection === 'left' || swipeDirection === 'down') {
-    //                         controlState.leftPressed = true;
-    //                         controlState.rightPressed = false;
-    //                     } else if (swipeDirection === 'right' || swipeDirection === 'up') {
-    //                         controlState.leftPressed = false;
-    //                         controlState.rightPressed = true;
-    //                     } else {
-    //                         // No clear direction from swipe, so no momentum press
-    //                         controlState.leftPressed = false;
-    //                         controlState.rightPressed = false;
-    //                         lastSwipeVelocity = 0; // No velocity if no direction
-    //                     }
-    //                     updatePaddleMovement(); // Send final swipe state (direction + velocity)
+                        // Set controlState based on final swipe direction for the momentum period
+                        if (swipeDirection === 'left' || swipeDirection === 'down') {
+                            controlState.leftPressed = true;
+                            controlState.rightPressed = false;
+                        } else if (swipeDirection === 'right' || swipeDirection === 'up') {
+                            controlState.leftPressed = false;
+                            controlState.rightPressed = true;
+                        } else {
+                            // No clear direction from swipe, so no momentum press
+                            controlState.leftPressed = false;
+                            controlState.rightPressed = false;
+                            lastSwipeVelocity = 0; // No velocity if no direction
+                        }
+                        updatePaddleMovement(); // Send final swipe state (direction + velocity)
                         
-    //                     // Schedule reset of directional flags for momentum effect.
-    //                     // lastSwipeVelocity is NOT reset here; game's paddle.swipeVelocity handles decay.
-    //                     setTimeout(function() {
-    //                         controlState.leftPressed = false;
-    //                         controlState.rightPressed = false;
-    //                         // lastSwipeVelocity = 0; // DO NOT DO THIS - let paddle.swipeVelocity decay
-    //                         updatePaddleMovement(); // Inform game that direct press ended
-    //                     }, 300); // Momentum effect duration
-    //                 } else { // Tap or insignificant movement
-    //                     controlState.leftPressed = false;
-    //                     controlState.rightPressed = false;
-    //                     lastSwipeVelocity = 0;
-    //                     updatePaddleMovement();
+                        // Schedule reset of directional flags for momentum effect.
+                        // lastSwipeVelocity is NOT reset here; game's paddle.swipeVelocity handles decay.
+                        setTimeout(function() {
+                            controlState.leftPressed = false;
+                            controlState.rightPressed = false;
+                            // lastSwipeVelocity = 0; // DO NOT DO THIS - let paddle.swipeVelocity decay
+                            updatePaddleMovement(); // Inform game that direct press ended
+                        }, 300); // Momentum effect duration
+                    } else { // Tap or insignificant movement
+                        controlState.leftPressed = false;
+                        controlState.rightPressed = false;
+                        lastSwipeVelocity = 0;
+                        updatePaddleMovement();
                         
-    //                     if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10 && touchTime < 200) { // Treat as a tap
-    //                         if (window.gameControls && window.gameControls.pressSpacebar) {
-    //                             window.gameControls.pressSpacebar();
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }, { passive: false });
+                        if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10 && touchTime < 200) { // Treat as a tap
+                            if (window.gameControls && window.gameControls.pressSpacebar) {
+                                window.gameControls.pressSpacebar();
+                            }
+                        }
+                    }
+                }
+            }, { passive: false });
             
-    //         localCanvas.addEventListener('touchcancel', function(e) {
-    //             e.preventDefault();
-    //             if (isTouching) {
-    //                 isTouching = false;
-    //                 controlState.leftPressed = false;
-    //                 controlState.rightPressed = false;
-    //                 lastSwipeVelocity = 0;
-    //                 swipeDirection = null;
-    //                 updatePaddleMovement();
-    //             }
-    //         }, { passive: false });
-    //     }
+            localCanvas.addEventListener('touchcancel', function(e) {
+                e.preventDefault();
+                if (isTouching) {
+                    isTouching = false;
+                    controlState.leftPressed = false;
+                    controlState.rightPressed = false;
+                    lastSwipeVelocity = 0;
+                    swipeDirection = null;
+                    updatePaddleMovement();
+                }
+            }, { passive: false });
+        }
         
-    //     // Initialize scroll wheel controls
-    //     function initScrollWheelControls() {
-    //         const localCanvas = document.getElementById('gameCanvas');
-    //         const targetElement = localCanvas || document; // Scroll on canvas or fallback to document
+        // Initialize scroll wheel controls
+        function initScrollWheelControls() {
+            const localCanvas = document.getElementById('gameCanvas');
+            const targetElement = localCanvas || document; // Scroll on canvas or fallback to document
 
-    //         targetElement.addEventListener('wheel', function(e) {
-    //             if (localCanvas && !localCanvas.contains(e.target) && e.target !== localCanvas) {
-    //                 return; // Ignore scroll if not on canvas (if canvas exists)
-    //             }
-    //             e.preventDefault();
+            targetElement.addEventListener('wheel', function(e) {
+                if (localCanvas && !localCanvas.contains(e.target) && e.target !== localCanvas) {
+                    return; // Ignore scroll if not on canvas (if canvas exists)
+                }
+                e.preventDefault();
                 
-    //             // Scroll should be a discrete nudge, so reset swipe velocity
-    //             lastSwipeVelocity = 0;
+                // Scroll should be a discrete nudge, so reset swipe velocity
+                lastSwipeVelocity = 0;
 
-    //             if (e.deltaY > 0) { // Scrolling down - move paddle left
-    //                 controlState.leftPressed = true;
-    //                 controlState.rightPressed = false;
-    //             } else if (e.deltaY < 0) { // Scrolling up - move paddle right
-    //                 controlState.leftPressed = false;
-    //                 controlState.rightPressed = true;
-    //             }
-    //             updatePaddleMovement();
+                if (e.deltaY > 0) { // Scrolling down - move paddle left
+                    controlState.leftPressed = true;
+                    controlState.rightPressed = false;
+                } else if (e.deltaY < 0) { // Scrolling up - move paddle right
+                    controlState.leftPressed = false;
+                    controlState.rightPressed = true;
+                }
+                updatePaddleMovement();
                 
-    //             setTimeout(function() {
-    //                 controlState.leftPressed = false;
-    //                 controlState.rightPressed = false;
-    //                 updatePaddleMovement();
-    //             }, 100); // Reset after a short delay for nudge effect
-    //         }, { passive: false });
-    //     }
+                setTimeout(function() {
+                    controlState.leftPressed = false;
+                    controlState.rightPressed = false;
+                    updatePaddleMovement();
+                }, 100); // Reset after a short delay for nudge effect
+            }, { passive: false });
+        }
         
-    //     // Adjust touch sensitivity (callable from game if UI is added)
-    //     function setTouchSensitivity(value) {
-    //         controlState.touchSensitivity = Math.max(0.1, Math.min(2.0, value));
-    //     }
+        // Adjust touch sensitivity (callable from game if UI is added)
+        function setTouchSensitivity(value) {
+            controlState.touchSensitivity = Math.max(0.1, Math.min(2.0, value));
+        }
         
-    //     // Initialize all control types
-    //     function initAllControls() {
-    //         initKeyboardControls();
-    //         initTouchControls();
-    //         initScrollWheelControls();
-    //     }
+        // Initialize all control types
+        function initAllControls() {
+            initKeyboardControls();
+            initTouchControls();
+            initScrollWheelControls();
+        }
         
-    //     // Expose init function for the main game to call, and other control settings
-    //     window.inputControls = {
-    //         init: initAllControls,
-    //         setTouchSensitivity: setTouchSensitivity
-    //     };
-    //     // Removed: window.addEventListener('load', init); // Main game handles this.
-    //     // Removed: window.controls exposure, using window.inputControls for clarity
-    // })(); // End of Controls IIFE
+        // Expose init function for the main game to call, and other control settings
+        window.inputControls = {
+            init: initAllControls,
+            setTouchSensitivity: setTouchSensitivity
+        };
+        // Removed: window.addEventListener('load', init); // Main game handles this.
+        // Removed: window.controls exposure, using window.inputControls for clarity
+    })(); // End of Controls IIFE
     
     // Game states
     const GAME_STATE = {
