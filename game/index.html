@@ -79,7 +79,7 @@
         ghostBalls: [], ghostBallAlpha: 0.6,
         paddleMorphTimer: 0, paddleMorphInterval: 3000,
         timeDimensionWavePhase: 0, timeDimensionSpeedPhase: 0, timeDimensionSpeedPhase2: 0,
-        animationTick: 0 // For global animations like galaxy swirl
+        animationTick: 0 
     };
     const AudioManager = { sounds: {}, soundPaths: { brickBreak: 'assets/sounds/breaks/brick_break.wav', specialBrickBreak: 'assets/sounds/breaks/special_brick_break.wav', paddleHit: 'assets/sounds/hits/paddle_hit.mp3', wallHit: 'assets/sounds/hits/wall_hit.mp3', dimensionShift: 'assets/sounds/powerups/dimension_shift.wav', gameOver: 'assets/sounds/powerups/game_over.wav', gameStart: 'assets/sounds/powerups/game_start.wav', levelComplete: 'assets/sounds/powerups/level_complete.mp3' }, loadSound: function(n, p) { const a = new Audio(p); a.onerror=()=>console.error(`Error loading: ${n} at ${p}`); this.sounds[n]=a; }, loadAllSounds: function() { for (const n in this.soundPaths) this.loadSound(n, this.soundPaths[n]); }, playSound: function(n) { if (game.isSoundEnabled && this.sounds[n]) { this.sounds[n].currentTime=0; this.sounds[n].play().catch(()=>{});}}, enableSounds: function() { if (!game.isSoundEnabled) { game.isSoundEnabled=true; new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA").play().catch(()=>{}); this.loadAllSounds();}} };
     const controlState = { leftPressed: false, rightPressed: false, touchStartX: 0, touchPaddleOffsetX: 0, isPaddleTouched: false };
@@ -134,23 +134,14 @@
 
                         for (let i = 0; i < brickConfig.galaxySwirlParticles; i++) {
                             const angleOffset = (i / brickConfig.galaxySwirlParticles) * Math.PI * 2;
-                            const orbitSpeedMultiplier = 0.8 + (i % 3) * 0.2; // Different speeds for layers
+                            const orbitSpeedMultiplier = 0.8 + (i % 3) * 0.2; 
                             const currentAngle = brickConfig.dimensionBrickPulseRate * orbitSpeedMultiplier + angleOffset;
-                            
-                            const distance = maxOrbitRadius * (0.5 + Math.sin(brickConfig.dimensionBrickPulseRate * 0.5 + angleOffset * 2) * 0.3); // Pulsating distance
-                            
+                            const distance = maxOrbitRadius * (0.5 + Math.sin(brickConfig.dimensionBrickPulseRate * 0.5 + angleOffset * 2) * 0.3); 
                             const particleX = centerX + Math.cos(currentAngle) * distance;
                             const particleY = centerY + Math.sin(currentAngle) * distance;
-                            
-                            const size = 1 + Math.sin(brickConfig.dimensionBrickPulseRate + i) * 0.5; // Pulsating size
+                            const size = 1 + Math.sin(brickConfig.dimensionBrickPulseRate + i) * 0.5; 
                             const alpha = 0.5 + Math.sin(brickConfig.dimensionBrickPulseRate * 1.5 + i * 0.5) * 0.4;
-
-                            ctx.beginPath();
-                            ctx.arc(particleX, particleY, Math.max(0.5, size), 0, Math.PI * 2);
-                            ctx.fillStyle = brickConfig.galaxySwirlColors[i % brickConfig.galaxySwirlColors.length];
-                            ctx.globalAlpha = Math.max(0.1, alpha);
-                            ctx.fill();
-                            ctx.globalAlpha = 1.0;
+                            ctx.beginPath(); ctx.arc(particleX, particleY, Math.max(0.5, size), 0, Math.PI * 2); ctx.fillStyle = brickConfig.galaxySwirlColors[i % brickConfig.galaxySwirlColors.length]; ctx.globalAlpha = Math.max(0.1, alpha); ctx.fill(); ctx.globalAlpha = 1.0;
                         }
                     }
                 }
@@ -199,25 +190,48 @@
     function createImpactParticles(x,y,c,ct,sm=1){for(let i=0;i<ct;i++)game.particles.push({x:x,y:y,s:Math.random()*2+1,c:c,vx:(Math.random()-.5)*2*sm,vy:(Math.random()-.5)*2*sm,l:Math.random()*30+20})}
     function updateParticles(){for(let i=game.particles.length-1;i>=0;i--){const p=game.particles[i];p.x+=p.vx;p.y+=p.vy;p.l--;if(p.l<=0)game.particles.splice(i,1)}}
     function drawParticles(){game.particles.forEach(p=>{ctx.fillStyle=p.c;ctx.globalAlpha=p.l/50;ctx.fillRect(p.x-p.s/2,p.y-p.s/2,p.s,p.s);ctx.globalAlpha=1.0})}
-    function initControls() { document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')controlState.leftPressed=true;if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')controlState.rightPressed=true;if(e.key==='ArrowDown')controlState.leftPressed=true;if(e.key==='ArrowUp')controlState.rightPressed=true;if(e.key===' '||e.key==='Spacebar'||e.key==='Enter'){e.preventDefault();handleGameAction();}if(e.key.toLowerCase()==='p'){if(game.state===GAME_STATE.PLAYING)game.state=GAME_STATE.PAUSED;else if(game.state===GAME_STATE.PAUSED)game.state=GAME_STATE.PLAYING;}}); document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')controlState.leftPressed=false;if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')controlState.rightPressed=false;if(e.key==='ArrowDown')controlState.leftPressed=false;if(e.key==='ArrowUp')controlState.rightPressed=false;}); let tS=0;const tMD=200,tMM=15;function gTP(e){const r=canvas.getBoundingClientRect(),sX=canvas.width/r.width,sY=canvas.height/r.height,t=e.changedTouches?e.changedTouches[0]:e.touches[0];return{x:(t.clientX-r.left)*sX,y:(t.clientY-r.top)*sY,rX:t.clientX};} canvas.addEventListener('touchstart',e=>{e.preventDefault();if(!e.touches.length)return;const p=gTP(e);controlState.touchStartX=p.rX;tS=Date.now();let tZH=80;if(((game.currentDimension!==DIMENSIONS.CEILING_PADDLE)&&p.y>GAME_HEIGHT-tZH)||((game.currentDimension===DIMENSIONS.CEILING_PADDLE)&&p.y<tZH)){controlState.isPaddleTouched=true;controlState.touchPaddleOffsetX=paddle.x-(p.x-paddle.width/2);paddle.x=(p.x-paddle.width/2)-controlState.touchPaddleOffsetX;}else{controlState.isPaddleTouched=false;}},{passive:false}); canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!e.touches.length||!controlState.isPaddleTouched)return;const p=gTP(e);paddle.x=(p.x-paddle.width/2)-controlState.touchPaddleOffsetX;},{passive:false}); canvas.addEventListener('touchend',e=>{e.preventDefault();const tD=Date.now()-tS,p=gTP(e),tMDst=Math.abs(p.rX-controlState.touchStartX);if(tD<tMD&&tMDst<tMM&&!controlState.isPaddleTouched)handleGameAction();controlState.isPaddleTouched=false;},{passive:false}); canvas.addEventListener('wheel',e=>{e.preventDefault();if(e.deltaY<0){controlState.rightPressed=true;controlState.leftPressed=false;}else if(e.deltaY>0){controlState.leftPressed=true;controlState.rightPressed=false;}setTimeout(()=>{controlState.leftPressed=false;controlState.rightPressed=false;},100);},{passive:false});}
+    
+    function initControls() { 
+        document.addEventListener('keydown',e=>{
+            if (e.key==='ArrowLeft'||e.key.toLowerCase()==='a'||e.key==='PageDown')controlState.leftPressed=true;
+            if(e.key==='ArrowRight'||e.key.toLowerCase()==='d'||e.key==='PageUp')controlState.rightPressed=true;
+            if(e.key==='ArrowDown')controlState.leftPressed=true;
+            if(e.key==='ArrowUp')controlState.rightPressed=true;
+            if(e.key===' '||e.key==='Spacebar'||e.key==='Enter'){e.preventDefault();handleGameAction();}
+            if(e.key.toLowerCase()==='p'){if(game.state===GAME_STATE.PLAYING)game.state=GAME_STATE.PAUSED;else if(game.state===GAME_STATE.PAUSED)game.state=GAME_STATE.PLAYING;}
+        }); 
+        document.addEventListener('keyup',e=>{
+            if (e.key==='ArrowLeft'||e.key.toLowerCase()==='a'||e.key==='PageDown')controlState.leftPressed=false;
+            if(e.key==='ArrowRight'||e.key.toLowerCase()==='d'||e.key==='PageUp')controlState.rightPressed=false;
+            if(e.key==='ArrowDown')controlState.leftPressed=false;
+            if(e.key==='ArrowUp')controlState.rightPressed=false;
+        }); 
+        let tS=0;const tMD=200,tMM=15;
+        function gTP(e){const r=canvas.getBoundingClientRect(),sX=canvas.width/r.width,sY=canvas.height/r.height,t=e.changedTouches?e.changedTouches[0]:e.touches[0];return{x:(t.clientX-r.left)*sX,y:(t.clientY-r.top)*sY,rX:t.clientX};} 
+        canvas.addEventListener('touchstart',e=>{e.preventDefault();if(!e.touches.length)return;const p=gTP(e);controlState.touchStartX=p.rX;tS=Date.now();let tZH=80;
+            if(((game.currentDimension!==DIMENSIONS.CEILING_PADDLE)&&p.y>GAME_HEIGHT-tZH)||((game.currentDimension===DIMENSIONS.CEILING_PADDLE)&&p.y<tZH)){
+                controlState.isPaddleTouched=true;
+                controlState.touchPaddleOffsetX = p.x - paddle.x; // Corrected offset calculation
+            }else{controlState.isPaddleTouched=false;}
+        },{passive:false}); 
+        canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!e.touches.length||!controlState.isPaddleTouched)return;const p=gTP(e);
+            paddle.x = p.x - controlState.touchPaddleOffsetX; // Apply corrected offset
+        },{passive:false}); 
+        canvas.addEventListener('touchend',e=>{e.preventDefault();const tD=Date.now()-tS,p=gTP(e),tMDst=Math.abs(p.rX-controlState.touchStartX);if(tD<tMD&&tMDst<tMM&&!controlState.isPaddleTouched)handleGameAction();controlState.isPaddleTouched=false;},{passive:false}); 
+        canvas.addEventListener('wheel',e=>{e.preventDefault();if(e.deltaY<0){controlState.rightPressed=true;controlState.leftPressed=false;}else if(e.deltaY>0){controlState.leftPressed=true;controlState.rightPressed=false;}setTimeout(()=>{controlState.leftPressed=false;controlState.rightPressed=false;},100);},{passive:false});
+    }
     
     function update(deltaTime) {
-        game.animationTick++; // Increment global animation ticker
-
+        game.animationTick++; 
         if (game.state === GAME_STATE.PLAYING || game.state === GAME_STATE.LEVEL_COMPLETE) { 
             if (game.currentDimension === DIMENSIONS.TIME && game.state === GAME_STATE.PLAYING) { 
-                game.timeDimensionSpeedPhase += 0.035; 
-                game.timeDimensionSpeedPhase2 += 0.015;
-                const sin1 = (Math.sin(game.timeDimensionSpeedPhase) + 1) / 2; 
-                const sin2 = (Math.sin(game.timeDimensionSpeedPhase2) + 1) / 2;
-                const combinedSin = (sin1 * 0.7 + sin2 * 0.3);
-                const minTS = 0.3; const maxTS = 1.3; 
-                game.timeScale = minTS + (maxTS - minTS) * combinedSin;
-                game.timeDimensionWavePhase += 0.06; 
+                game.timeDimensionSpeedPhase += 0.035; game.timeDimensionSpeedPhase2 += 0.015;
+                const sin1 = (Math.sin(game.timeDimensionSpeedPhase) + 1) / 2; const sin2 = (Math.sin(game.timeDimensionSpeedPhase2) + 1) / 2;
+                const combinedSin = (sin1 * 0.7 + sin2 * 0.3); const minTS = 0.3; const maxTS = 1.3; 
+                game.timeScale = minTS + (maxTS - minTS) * combinedSin; game.timeDimensionWavePhase += 0.06; 
             }
             if (game.state === GAME_STATE.PLAYING) {
-                paddle.update(); 
-                brickCollisionDetection();
+                paddle.update(); brickCollisionDetection();
                 game.ghostBalls.forEach(gb => gb.update());
                 game.ghostBalls = game.ghostBalls.filter(gb => gb.y < GAME_HEIGHT + gb.radius && gb.y > -gb.radius);
                 if (game.dimensionTimerActive && game.currentDimension !== DIMENSIONS.NORMAL) { if (Date.now() >= game.dimensionEndTime) { shiftDimension(DIMENSIONS.NORMAL); }}
